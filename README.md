@@ -1,5 +1,5 @@
 # Video_Maker
-For my anime video
+Generate 16-grid thumbnail. Extract audio from the video. Then use Whisper to generate srt file. Finally combine audio, srt file and thumbnail together into a video.
 
 # How to run
 
