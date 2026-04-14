@@ -3,13 +3,15 @@ import os
 import json
 from dataclasses import dataclass
 from typing import List, Optional
+import argparse
 
 @dataclass
 class VideoTask:
     """视频任务数据类，保存单个视频的解析结果（支持扩展新字段）"""
     video_path: str          # 视频文件完整路径
     audio_stream_index: int  # 音频轨道索引，默认0
-    cut_seconds: float       # 裁剪秒数，0表示不裁剪
+    cut_front_seconds: float # 裁剪开头秒数，0表示不裁剪
+    cut_back_seconds: float  # 裁剪结尾秒数，0表示不裁剪
     subtitle_lang: str       # 字幕语言（新增字段），默认德语"de"
     srt_stream_index: int = 0  # 字幕流索引，-1表示未指定或自动选择
 
@@ -42,7 +44,8 @@ class InputParser:
                     VideoTask(
                         video_path=video_path,
                         audio_stream_index=0,
-                        cut_seconds=0.0,
+                        cut_front_seconds=0.0,
+                        cut_back_seconds=0.0,
                         subtitle_lang="de",  # 文件夹模式默认德语
                         srt_stream_index=-1  # 文件夹模式默认-1
                     )
@@ -64,8 +67,8 @@ class InputParser:
             raise ValueError("JSON文件必须是数组格式（列表）")
         
         for idx, item in enumerate(json_data):
-            # 检查必填字段（新增subtitle_lang）
-            required_fields = ['video_path', 'audio_stream_index', 'cut_seconds', 'subtitle_lang']
+            # 检查必填字段（修改并新增了裁剪参数）
+            required_fields = ['video_path', 'audio_stream_index', 'cut_front_seconds', 'cut_back_seconds', 'subtitle_lang']
             missing_fields = [f for f in required_fields if f not in item]
             if missing_fields:
                 raise ValueError(f"JSON第{idx+1}项缺少字段：{missing_fields}")
@@ -76,7 +79,8 @@ class InputParser:
                 raise ValueError(f"JSON第{idx+1}项视频文件不存在：{video_path}")
             
             audio_idx = int(item['audio_stream_index'])
-            cut_sec = float(item['cut_seconds'])
+            cut_front_sec = float(item['cut_front_seconds'])
+            cut_back_sec = float(item['cut_back_seconds'])
             sub_lang = item['subtitle_lang'].strip()
 
              # 处理可选的srt_stream_index字段
@@ -87,8 +91,11 @@ class InputParser:
             else:
                 srt_idx = -1  # 默认值
             
-            if cut_sec < 0:
-                raise ValueError(f"JSON第{idx+1}项裁剪秒数不能为负数：{cut_sec}")
+            # 分别验证开头和结尾裁剪的秒数不能为负
+            if cut_front_sec < 0:
+                raise ValueError(f"JSON第{idx+1}项开头裁剪秒数(cut_front_seconds)不能为负数：{cut_front_sec}")
+            if cut_back_sec < 0:
+                raise ValueError(f"JSON第{idx+1}项结尾裁剪秒数(cut_back_seconds)不能为负数：{cut_back_sec}")
             if not sub_lang:
                 raise ValueError(f"JSON第{idx+1}项字幕语言不能为空")
             
@@ -97,25 +104,31 @@ class InputParser:
                 VideoTask(
                     video_path=video_path,
                     audio_stream_index=audio_idx,
-                    cut_seconds=cut_sec,
+                    cut_front_seconds=cut_front_sec,
+                    cut_back_seconds=cut_back_sec,
                     subtitle_lang=sub_lang,
                     srt_stream_index=srt_idx
                 )
             )
         print(f"✅ 解析JSON完成，找到 {len(self.video_tasks)} 个视频任务")
 
-def generate_video_json(folder_path: str, output_json_path: str, audio_stream_index=0, cut_seconds = 0., default_sub_lang: str = "de", default_srt_index: int = -1):
+
+def generate_video_json(folder_path: str, output_json_path: str, audio_stream_index=0, cut_front_seconds=0.0, cut_back_seconds=0.0, default_sub_lang: str = "de", default_srt_index: int = -1):
     """
-    从视频文件夹生成JSON配置文件（新增默认字幕语言字段）
+    从视频文件夹生成JSON配置文件
     Args:
         folder_path: 视频文件夹路径
         output_json_path: 生成的JSON文件保存路径
+        audio_stream_index: 默认音轨索引
+        cut_front_seconds: 默认开头裁剪秒数
+        cut_back_seconds: 默认结尾裁剪秒数
         default_sub_lang: 默认字幕语言，默认德语"de"
+        default_srt_index: 默认字幕流索引
     """
     if not os.path.isdir(folder_path):
         raise ValueError(f"文件夹不存在：{folder_path}")
     
-    # 遍历视频文件生成JSON数据（包含subtitle_lang）
+    # 遍历视频文件生成JSON数据
     video_extensions = ('.mp4', '.mkv', '.avi', '.mov')
     json_data = []
     for filename in os.listdir(folder_path):
@@ -124,9 +137,10 @@ def generate_video_json(folder_path: str, output_json_path: str, audio_stream_in
             json_data.append({
                 "video_path": video_path,
                 "audio_stream_index": audio_stream_index,
-                "cut_seconds": cut_seconds,
-                "subtitle_lang": default_sub_lang,  # 新增字段
-                "srt_stream_index": default_srt_index  # 新增字段
+                "cut_front_seconds": cut_front_seconds,
+                "cut_back_seconds": cut_back_seconds,
+                "subtitle_lang": default_sub_lang,
+                "srt_stream_index": default_srt_index
             })
     
     if not json_data:
@@ -141,5 +155,37 @@ def generate_video_json(folder_path: str, output_json_path: str, audio_stream_in
 
 
 if __name__ == "__main__":
-    input_dir = input("请输入视频文件所在目录路径: ").strip()
-    generate_video_json(input_dir, os.path.join(input_dir, "json.json"), default_sub_lang='fr')
+    # input_dir = input("请输入视频文件所在目录路径: ").strip()
+    # generate_video_json(input_dir, os.path.join(input_dir, "json.json"), 
+    #                     default_sub_lang='en', 
+    #                     audio_stream_index=1,
+    #                     cut_front_seconds=11,
+    #                     cut_back_seconds=66,
+    #                     default_srt_index=14
+    #                     )
+    
+    parser = argparse.ArgumentParser(description="从视频文件夹生成 JSON 配置文件")
+    parser.add_argument("folder_path", help="视频文件夹路径（必填）")
+    parser.add_argument("--audio_stream_index", type=int, default=0,
+                        help="默认音轨索引（默认: 0）")
+    parser.add_argument("--cut_front_seconds", type=float, default=0.0,
+                        help="默认开头裁剪秒数（默认: 0.0）")
+    parser.add_argument("--cut_back_seconds", type=float, default=0.0,
+                        help="默认结尾裁剪秒数（默认: 0.0）")
+    parser.add_argument("--default_sub_lang", type=str, default="de",
+                        help="默认字幕语言（默认: de）")
+    parser.add_argument("--default_srt_index", type=int, default=-1,
+                        help="默认字幕流索引（默认: -1）")
+    
+    args = parser.parse_args()
+    
+    generate_video_json(
+        folder_path=args.folder_path,
+        output_json_path=os.path.join(args.folder_path, "json.json"),
+        audio_stream_index=args.audio_stream_index,
+        cut_front_seconds=args.cut_front_seconds,
+        cut_back_seconds=args.cut_back_seconds,
+        default_sub_lang=args.default_sub_lang,
+        default_srt_index=args.default_srt_index
+    )
+    

@@ -47,14 +47,14 @@ def generate_subtitles(audio_path: str, output_dir: str, model: str = "turbo", s
 
 # 单独运行时的命令行逻辑
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("使用方法：python generate_subtitles.py <音频文件路径> <输出目录> [模型] [字幕语言]")
-        print("示例：")
-        print("  python generate_subtitles.py ./audio/test.aac ./subtitles turbo de")
-        sys.exit(1)
+#    if len(sys.argv) < 3:
+#        print("使用方法：python generate_subtitles.py <音频文件路径> <输出目录> [模型] [字幕语言]")
+#        print("示例：")
+#        print("  python generate_subtitles.py ./audio/test.aac ./subtitles turbo de")
+#        sys.exit(1)
     
-    audio_path = sys.argv[1]
-    output_dir = sys.argv[2]
+    audio_path = r'' # sys.argv[1]
+    output_dir = r'' # sys.argv[2]
     model = sys.argv[3] if len(sys.argv) >=4 else "turbo"
     subtitle_lang = sys.argv[4] if len(sys.argv) >=5 else "de"
     

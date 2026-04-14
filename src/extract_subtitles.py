@@ -1,39 +1,115 @@
 import subprocess
 import json
 import os
+import re
+from datetime import timedelta
+from util import get_video_duration
 
-def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None):
+def adjust_srt_timestamps(srt_path, cut_front_seconds, cut_back_seconds, video_duration):
     """
-    分析 MKV 视频并提取所有文本字幕轨为 SRT 文件。
+    读取 SRT 文件并根据开头和结尾裁剪秒数调整时间轴。
+    """
+    if cut_front_seconds <= 0 and cut_back_seconds <= 0:
+        return
+
+    front_td = timedelta(seconds=cut_front_seconds)
+    # 计算截止的时间点
+    end_threshold_s = video_duration - cut_back_seconds if cut_back_seconds > 0 else video_duration
+    
+    with open(srt_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    blocks = re.split(r'\n\n+', content.strip())
+    new_blocks = []
+    new_index = 1
+
+    def parse_time(time_str):
+        h, m, s_ms = time_str.split(':')
+        s, ms = s_ms.split(',')
+        return timedelta(hours=int(h), minutes=int(m), seconds=int(s), milliseconds=int(ms))
+
+    def format_time(td):
+        total_seconds = int(td.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        milliseconds = int(td.microseconds / 1000)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+
+    for block in blocks:
+        lines = block.strip().split('\n')
+        if len(lines) >= 3:
+            times = lines[1].split(' --> ')
+            if len(times) != 2:
+                continue
+            
+            try:
+                start_td = parse_time(times[0].strip())
+                end_td = parse_time(times[1].strip())
+            except Exception:
+                continue
+
+            # --- 结尾裁剪逻辑 ---
+            # 如果字幕的开始时间已经超过了保留部分的截止点，直接舍弃
+            if cut_back_seconds > 0 and start_td.total_seconds() >= end_threshold_s:
+                continue
+            # 如果字幕横跨了截止点，将其结束时间缩减至截止点
+            if cut_back_seconds > 0 and end_td.total_seconds() > end_threshold_s:
+                end_td = timedelta(seconds=end_threshold_s)
+
+            # --- 开头裁剪逻辑 ---
+            # 减去开头的偏移量
+            start_td -= front_td
+            end_td -= front_td
+
+            # 如果在开头裁剪后，该句字幕结束时间小于0，跳过
+            if end_td.total_seconds() < 0:
+                continue
+            # 如果开始时间小于0，置为0
+            if start_td.total_seconds() < 0:
+                start_td = timedelta(seconds=0)
+
+            # 重组字幕块
+            new_lines = [
+                str(new_index),
+                f"{format_time(start_td)} --> {format_time(end_td)}"
+            ]
+            new_lines.extend(lines[2:])
+            new_blocks.append('\n'.join(new_lines))
+            new_index += 1
+
+    with open(srt_path, 'w', encoding='utf-8') as f:
+        f.write('\n\n'.join(new_blocks) + '\n')
+
+
+def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, cut_front_seconds=0, cut_back_seconds=0):
+    """
+    分析 MKV 视频并提取所有文本字幕轨为 SRT 文件。支持双向裁剪时间轴。
     """
     if not os.path.isfile(video_path):
         print(f"❌ 错误: 找不到文件 {video_path}")
         return None
 
-    # 创建输出目录（如果不存在）
     os.makedirs(output_dir, exist_ok=True)
+    
+    # 如果需要裁剪结尾，先获取视频时长
+    video_duration = 0.0
+    if cut_back_seconds > 0:
+        video_duration = get_video_duration(video_path)
 
     print(f"正在分析视频: {video_path} ...\n")
     
-    # 构建 ffprobe 命令，获取所有字幕流的信息 (以 JSON 格式输出)
     ffprobe_cmd = [
-        "ffprobe",
-        "-v", "error",
+        "ffprobe", "-v", "error",
         "-show_entries", "stream=index,codec_name:stream_tags=language,title",
-        "-select_streams", "s",  # 只选择字幕流 (subtitles)
-        "-of", "json",
-        video_path
+        "-select_streams", "s", "-of", "json", video_path
     ]
 
     try:
-        # 执行 ffprobe 命令
         result = subprocess.run(ffprobe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         probe_data = json.loads(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ 解析视频失败，请检查视频文件或 FFmpeg 安装。错误信息:\n{e.stderr}")
-        return None
-    except json.JSONDecodeError:
-        print("❌ 无法解析 ffprobe 的输出。")
+    except Exception as e:
+        print(f"❌ 解析视频失败: {e}")
         return None
 
     streams = probe_data.get("streams", [])
@@ -41,79 +117,58 @@ def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None):
         print("ℹ️ 在此视频中未找到任何字幕轨。")
         return None
 
-    print(f"✅ 找到 {len(streams)} 条字幕轨，准备开始提取...\n")
-
-    # 筛选目标轨道（如果指定了的话）
     if target_track_indices is not None:
         streams = [s for s in streams if s.get("index") in target_track_indices]
-        if not streams:
-            print(f"\n⚠️ 未找到指定的轨道: {target_track_indices}")
-            return None
-        print(f"\n✅ 筛选出 {len(streams)} 条目标轨道，准备提取...")
-    else:
-        print(f"\n✅ 找到 {len(streams)} 条字幕轨，准备开始提取...\n")
     
-    # 获取文件名（不带扩展名）
     video_basename = os.path.splitext(os.path.basename(video_path))[0]
-
-    # 初始化成功提取的文件路径列表
     extracted_files = []
 
     for stream in streams:
         stream_index = stream.get("index")
         codec_name = stream.get("codec_name", "unknown")
-        
-        # 获取语言和标题（如果没有则使用默认值）
         tags = stream.get("tags", {})
-        language = tags.get("language", "und") # und 表示 undefined
-        title = tags.get("title", "")
+        language = tags.get("language", "und")
         
-        # 过滤掉图片类型的字幕（如蓝光的 PGS 或 DVD 的 VobSub），因为它们无法直接转为 SRT 文本
         if codec_name in ["hdmv_pgs_subtitle", "dvd_subtitle"]:
-            print(f"⚠️ 跳过流 {stream_index} ({language}): 图片型字幕 ({codec_name}) 无法直接提取为 SRT 文本，需要 OCR 识别。")
             continue
             
-        # 构造输出文件名：原文件名_流索引_语言.srt
         output_filename = f"{video_basename}_track{stream_index}.srt"
         output_file = os.path.join(output_dir, output_filename)
-        
-        # 替换文件名中可能引起问题的非法字符
-        # output_file = output_file.replace("/", "-").replace("\\", "-").replace(":", "-")
 
-        print(f"▶️ 正在提取流 {stream_index} ({language}, {codec_name}) -> {output_file}")
-        
-        # 构建 ffmpeg 提取命令
-        # -map 0:{stream_index} 精确选择指定的流
-        # -c:s srt 强制将字幕（如 ASS/SSA）转换为 SRT 格式
         ffmpeg_cmd = [
-            "ffmpeg",
-            "-y",  # 覆盖已存在的文件
-            "-v", "error",
+            "ffmpeg", "-y", "-v", "error",
             "-i", video_path,
             "-map", f"0:{stream_index}",
-            "-c:s", "srt",
-            output_file
+            "-c:s", "srt", output_file
         ]
 
         try:
             subprocess.run(ffmpeg_cmd, check=True)
-            print(f"   ✔️ 提取成功!")
-            extracted_files.append(output_file)
-        except subprocess.CalledProcessError as e:
-            print(f"   ❌ 提取失败。流索引: {stream_index}")
+            
+            # 处理时间轴裁剪
+            if cut_front_seconds > 0 or cut_back_seconds > 0:
+                print(f"   ⏱️ 正在根据裁剪参数调整字幕时间轴...")
+                # 如果没获取过时长但又需要它（应对逻辑严谨性），则在此获取
+                if video_duration == 0: video_duration = get_video_duration(video_path)
+                adjust_srt_timestamps(output_file, cut_front_seconds, cut_back_seconds, video_duration)
 
-    print("\n🎉 所有支持的字幕轨提取完毕！")
+            print(f"   ✔️ 提取完成: {output_file}")
+            extracted_files.append(output_file)
+        except subprocess.CalledProcessError:
+            print(f"   ❌ 提取失败: 流 {stream_index}")
+
     return extracted_files
 
 def main():
-    # 这里输入你的 MKV 视频文件路径
-    # 注意：如果是 Windows 系统，路径中的反斜杠最好写成双反斜杠 \\，或者在字符串前加 r
-    video_file = r"C:\Users\waner\Downloads\Takopii no Genzai\Takopii no Genzai - 01.mkv"  
-    target_tracks = [5]
+    video_file = input("input video path: ").strip()
+    target_tracks = [4]
     output_dir = os.path.join(os.path.dirname(video_file), "subtitles")
     
-    # 将视频文件路径传给提取字幕函数
-    extract_mkv_subtitles(video_file, output_dir=output_dir, target_track_indices=target_tracks)
+    # 示例：剪掉开头5秒，剪掉结尾3秒
+    extract_mkv_subtitles(video_file, output_dir=output_dir, 
+                           target_track_indices=target_tracks, 
+                           cut_front_seconds=5.0, 
+                           cut_back_seconds=3.0)
 
 if __name__ == "__main__":
     main()
