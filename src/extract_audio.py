@@ -1,10 +1,67 @@
 #!/usr/bin/env python3
 # extract_audio.py
+import json
 import os
 import sys
 import subprocess
 from util import get_video_duration
 
+# 2. 语言缩写到全称映射字典
+LANG_MAP = {
+    'en': ['english', 'eng', 'en'],
+    'de': ['german', 'ger', 'deu', 'de'],
+    'zh': ['chinese', 'chi', 'zho', 'zh'],
+    'ja': ['japanese', 'jpn', 'ja'],
+    'fr': ['french', 'fre', 'fra', 'fr'],
+    'es': ['spanish', 'spa', 'es'],
+    'ru': ['russian', 'rus', 'ru']
+}
+
+# 3. 添加 extract_audio_acc_language 函数
+def extract_audio_acc_language(video_path: str, output_dir: str, language: str, cut_front_seconds: float = 0.0, cut_back_seconds: float = 0.0):
+    """
+    根据给定的语言缩写，智能匹配并提取对应的音轨
+    """
+    target_langs = LANG_MAP.get(language.lower(), [language.lower()])
+    
+    # 获取视频的所有音轨信息
+    cmd = [
+        "ffprobe", "-v", "error", "-select_streams", "a",
+        "-show_entries", "stream=index:stream_tags=language,title",
+        "-of", "json", video_path
+    ]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        streams = json.loads(result.stdout).get('streams', [])
+    except Exception as e:
+        print(f"❌ 获取视频音轨信息失败: {e}")
+        return -1
+        
+    matched_stream_index = -1
+    matched_info = ""
+    
+    # 遍历音轨匹配语言
+    for idx, stream in enumerate(streams):
+        tags = stream.get('tags', {})
+        lang_tag = tags.get('language', '').lower()
+        title_tag = tags.get('title', '').lower()
+        
+        # 匹配逻辑：音轨的language或者title包含目标语言的值
+        if any(tl in lang_tag for tl in target_langs) or any(tl in title_tag for tl in target_langs):
+            matched_stream_index = idx  # 相对索引，给ffmpeg -map用
+            matched_info = f"索引: {idx}, 语言标签: '{lang_tag}', 标题: '{title_tag}'"
+            break
+            
+    if matched_stream_index == -1:
+        print(f"⚠️ 未找到匹配语言 [{language}] 的音轨")
+        return None  # 没有符合要求的音轨
+        
+    # 4. print出符合条件的对应音频信息，包括索引和名称
+    print(f"✅ 匹配到语言音轨 -> {matched_info}")
+    
+    # 取第一个执行 extract_audio 并返回生成的路径(等效于True并向后续传递参数)
+    return extract_audio(video_path, output_dir, matched_stream_index, cut_front_seconds, cut_back_seconds)
 
 def extract_audio(video_path: str, output_dir: str, audio_stream_index: int = 0, cut_front_seconds: float = 0.0, cut_back_seconds: float = 0.0):
     """

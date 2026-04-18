@@ -167,8 +167,8 @@ def main():
     # 示例：剪掉开头5秒，剪掉结尾3秒
     extract_mkv_subtitles(video_file, output_dir=output_dir, 
                            target_track_indices=target_tracks, 
-                           cut_front_seconds=5.0, 
-                           cut_back_seconds=3.0)
+                           cut_front_seconds=27.0, 
+                           cut_back_seconds=0.0)
 
 if __name__ == "__main__":
     main()

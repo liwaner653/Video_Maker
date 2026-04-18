@@ -5,7 +5,7 @@ import os
 import sys
 import argparse
 from input_parser import InputParser, generate_video_json
-from extract_audio import extract_audio
+from extract_audio import extract_audio, extract_audio_acc_language
 from generate_subtitles import generate_subtitles
 from embed_subtitle import embed_subtitle_to_video
 from generate_thumbnail import generate_thumbnail
@@ -13,7 +13,7 @@ from extract_subtitles import extract_mkv_subtitles
 
 
 # ===================== 核心Main函数 =====================
-def main(json_path):
+def main(json_path=r"D:\waner\4_ani\json.json"):
     
     # 2. 解析输入（文件夹/JSON）→ 得到视频任务列表
     input_str = json_path
@@ -65,24 +65,37 @@ def main(json_path):
         thumb_paths.add(dir_config["thumbnail"])
         audio_paths.add(dir_config["audio"])
         
-        # 步骤1：调用独立的generate_image.py中的generate_thumbnail生成缩略图
-        thumb_path = generate_thumbnail(
-            video_path=task.video_path,
-            output_dir=dir_config["thumbnail"],
-            thumbnail_size="320:180",
-            quality=2
-        )
-        if thumb_path:
+        # 步骤1：处理缩略图（根据是否提供 pic_path 决定是直接使用还是生成）
+        if task.pic_path:
+            thumb_path = task.pic_path
             stats["thumb_success"] += 1
+            print(f"✅ 使用指定的缩略图：{thumb_path}")
         else:
-            task_success = False
-            print(f"⚠️  缩略图生成失败，继续后续步骤...")
+            # 调用独立的generate_image.py中的generate_thumbnail生成缩略图
+            thumb_path = generate_thumbnail(
+                video_path=task.video_path,
+                output_dir=dir_config["thumbnail"],
+                thumbnail_size="320:180",
+                quality=2
+            )
+            if thumb_path:
+                stats["thumb_success"] += 1
+            else:
+                task_success = False
+                print(f"⚠️  缩略图生成失败，继续后续步骤...")
         
         # 步骤2：提取音频（调用extract_audio.py）
-        audio_path = extract_audio(
+        # audio_path = extract_audio(
+        #     video_path=task.video_path,
+        #     output_dir=dir_config["audio"],
+        #     audio_stream_index=task.audio_stream_index,
+        #     cut_front_seconds=task.cut_front_seconds,
+        #     cut_back_seconds=task.cut_back_seconds
+        # )
+        audio_path = extract_audio_acc_language(
             video_path=task.video_path,
             output_dir=dir_config["audio"],
-            audio_stream_index=task.audio_stream_index,
+            language=task.subtitle_lang,
             cut_front_seconds=task.cut_front_seconds,
             cut_back_seconds=task.cut_back_seconds
         )
@@ -146,7 +159,13 @@ def main(json_path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="视频处理主流程")
-    parser.add_argument("json_path", help="JSON 配置文件路径（必填）")
-    args = parser.parse_args()
-    main(args.json_path)
+    main(json_path=r"D:\waner\4_ani\json.json")
+#     parser = argparse.ArgumentParser(description="视频处理主流程")
+#     parser.add_argument(
+#         "json_path",
+#         nargs='?',
+#         default=r"D:\waner\4_ani\json.json",
+#         help="JSON 配置文件路径（可选，默认: D:\\waner\\4_ani\\json.json）",
+#     )
+#     args = parser.parse_args()
+#     main(args.json_path)
