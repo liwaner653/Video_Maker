@@ -41,6 +41,9 @@ def generate_subtitles(audio_path: str, output_dir: str, model: str = "turbo", s
         print(f"✅ 字幕生成完成：{srt_path}")
         print(f"result: {result}")
         return srt_path
+    except FileNotFoundError:
+        print("❌ Whisper 未安装或不在 PATH 中。请安装 OpenAI Whisper：pip install openai-whisper")
+        return None
     except subprocess.CalledProcessError as e:
         print(f"❌ 字幕生成失败：{e.stderr}")
         return None
