@@ -85,20 +85,22 @@ def main(json_path=r"D:\waner\4_ani\json.json"):
                 print(f"⚠️  缩略图生成失败，继续后续步骤...")
         
         # 步骤2：提取音频（调用extract_audio.py）
-        # audio_path = extract_audio(
-        #     video_path=task.video_path,
-        #     output_dir=dir_config["audio"],
-        #     audio_stream_index=task.audio.audio_stream_index,
-        #     cut_front_seconds=task.trim.cut_front_seconds if task.trim else 0.0,
-        #     cut_back_seconds=task.trim.cut_back_seconds if task.trim else 0.0
-        # )
-        audio_path = extract_audio_acc_language(
-            video_path=task.video_path,
-            output_dir=dir_config["audio"],
-            language=task.subtitle.subtitle_lang if task.subtitle else "de",
-            cut_front_seconds=task.trim.cut_front_seconds if task.trim else 0.0,
-            cut_back_seconds=task.trim.cut_back_seconds if task.trim else 0.0
-        )
+        if task.subtitle and task.subtitle.subtitle_lang:
+            audio_path = extract_audio_acc_language(
+                video_path=task.video_path,
+                output_dir=dir_config["audio"],
+                language=task.subtitle.subtitle_lang,
+                cut_front_seconds=task.trim.cut_front_seconds if task.trim else 0.0,
+                cut_back_seconds=task.trim.cut_back_seconds if task.trim else 0.0
+            )
+        else:
+            audio_path = extract_audio(
+                video_path=task.video_path,
+                output_dir=dir_config["audio"],
+                audio_stream_index=task.audio.audio_stream_index,
+                cut_front_seconds=task.trim.cut_front_seconds if task.trim else 0.0,
+                cut_back_seconds=task.trim.cut_back_seconds if task.trim else 0.0
+            )
         if audio_path:
             stats["audio_success"] += 1
         else:
@@ -160,7 +162,7 @@ def main(json_path=r"D:\waner\4_ani\json.json"):
 
 
 if __name__ == "__main__":
-    main(json_path=r"D:\waner\4_ani\json.json")
+    main(json_path=r"D:\sysu\10_myself\8_projects\Video_Maker\test\json.json")
 #     parser = argparse.ArgumentParser(description="视频处理主流程")
 #     parser.add_argument(
 #         "json_path",
