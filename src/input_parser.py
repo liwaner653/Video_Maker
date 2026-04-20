@@ -1,20 +1,9 @@
 # input_parser.py
 import os
 import json
-from dataclasses import dataclass
 from typing import List, Optional
 import argparse
-
-@dataclass
-class VideoTask:
-    """视频任务数据类，保存单个视频的解析结果（支持扩展新字段）"""
-    video_path: str          # 视频文件完整路径
-    audio_stream_index: int  # 音频轨道索引，默认0
-    cut_front_seconds: float # 裁剪开头秒数，0表示不裁剪
-    cut_back_seconds: float  # 裁剪结尾秒数，0表示不裁剪
-    subtitle_lang: str       # 字幕语言（新增字段），默认德语"de"
-    srt_stream_index: int = 0  # 字幕流索引，-1表示未指定或自动选择
-    pic_path: str = ""       # 封面图片路径（新增字段），默认空
+from video_task import VideoTask, Audio, Trim, Subtitle, Thumbnail
 
 class InputParser:
     """输入解析类：识别输入是文件夹/JSON文件，解析为统一的视频任务列表"""
@@ -44,12 +33,10 @@ class InputParser:
                 self.video_tasks.append(
                     VideoTask(
                         video_path=video_path,
-                        audio_stream_index=0,
-                        cut_front_seconds=0.0,
-                        cut_back_seconds=0.0,
-                        subtitle_lang="de",  # 文件夹模式默认德语
-                        srt_stream_index=-1,  # 文件夹模式默认-1
-                        pic_path=""          # 文件夹模式默认空
+                        audio=Audio(audio_stream_index=0),
+                        trim=Trim(cut_front_seconds=0.0, cut_back_seconds=0.0),
+                        subtitle=Subtitle(subtitle_lang="de", srt_stream_index=-1),
+                        thumbnail=Thumbnail(pic_path="")
                     )
                 )
         if not self.video_tasks:
@@ -57,7 +44,7 @@ class InputParser:
         print(f"✅ 解析文件夹完成，找到 {len(self.video_tasks)} 个视频任务")
     
     def _parse_json_file(self):
-        """解析JSON文件：读取视频路径、音轨、裁剪秒数、字幕语言"""
+        """解析JSON文件：读取嵌套对象结构"""
         try:
             with open(self.input_str, 'r', encoding='utf-8') as f:
                 json_data = json.load(f)
@@ -69,53 +56,62 @@ class InputParser:
             raise ValueError("JSON文件必须是数组格式（列表）")
         
         for idx, item in enumerate(json_data):
-            # 检查必填字段（修改并新增了裁剪参数）
-            required_fields = ['video_path', 'audio_stream_index', 'cut_front_seconds', 'cut_back_seconds', 'subtitle_lang']
+            # 检查必填字段
+            required_fields = ['video_path', 'audio', 'thumbnail']
             missing_fields = [f for f in required_fields if f not in item]
             if missing_fields:
                 raise ValueError(f"JSON第{idx+1}项缺少字段：{missing_fields}")
             
-            # 验证字段类型和值
+            # 验证video_path
             video_path = item['video_path']
             if not os.path.isfile(video_path):
                 raise ValueError(f"JSON第{idx+1}项视频文件不存在：{video_path}")
             
-            audio_idx = int(item['audio_stream_index'])
-            cut_front_sec = float(item['cut_front_seconds'])
-            cut_back_sec = float(item['cut_back_seconds'])
-            sub_lang = item['subtitle_lang'].strip()
-
-             # 处理可选的srt_stream_index字段
-            if 'srt_stream_index' in item:
-                srt_idx = int(item['srt_stream_index'])
-                if srt_idx < -1:  # 允许-1表示未指定
-                    raise ValueError(f"JSON第{idx+1}项字幕流索引不能小于-1：{srt_idx}")
-            else:
-                srt_idx = -1  # 默认值
-
-            # 处理可选的pic_path字段 (新增逻辑)
-            pic_path = item.get('pic_path', "").strip()
-            if pic_path and not os.path.isfile(pic_path):
-                raise ValueError(f"JSON第{idx+1}项指定的封面图片不存在：{pic_path}")
+            # 解析audio对象
+            audio_data = item['audio']
+            if 'audio_stream_index' not in audio_data:
+                raise ValueError(f"JSON第{idx+1}项audio对象缺少audio_stream_index")
+            audio = Audio(int(audio_data['audio_stream_index']))
             
-            # 分别验证开头和结尾裁剪的秒数不能为负
-            if cut_front_sec < 0:
-                raise ValueError(f"JSON第{idx+1}项开头裁剪秒数(cut_front_seconds)不能为负数：{cut_front_sec}")
-            if cut_back_sec < 0:
-                raise ValueError(f"JSON第{idx+1}项结尾裁剪秒数(cut_back_seconds)不能为负数：{cut_back_sec}")
-            if not sub_lang:
-                raise ValueError(f"JSON第{idx+1}项字幕语言不能为空")
+            # 解析可选的trim对象
+            trim = None
+            if 'trim' in item:
+                trim_data = item['trim']
+                cut_front = float(trim_data.get('cut_front_seconds', 0.0))
+                cut_back = float(trim_data.get('cut_back_seconds', 0.0))
+                if cut_front < 0 or cut_back < 0:
+                    raise ValueError(f"JSON第{idx+1}项trim对象裁剪秒数不能为负")
+                trim = Trim(cut_front, cut_back)
+            
+            # 解析可选的subtitle对象
+            subtitle = None
+            if 'subtitle' in item:
+                sub_data = item['subtitle']
+                if 'subtitle_lang' not in sub_data:
+                    raise ValueError(f"JSON第{idx+1}项subtitle对象缺少subtitle_lang")
+                sub_lang = sub_data['subtitle_lang'].strip()
+                if not sub_lang:
+                    raise ValueError(f"JSON第{idx+1}项字幕语言不能为空")
+                srt_idx = int(sub_data.get('srt_stream_index', -1))
+                if srt_idx < -1:
+                    raise ValueError(f"JSON第{idx+1}项字幕流索引不能小于-1：{srt_idx}")
+                subtitle = Subtitle(sub_lang, srt_idx)
+            
+            # 解析thumbnail对象
+            thumbnail_data = item['thumbnail']
+            pic_path = thumbnail_data.get('pic_path', "").strip()
+            if pic_path and not os.path.isfile(pic_path):
+                raise ValueError(f"JSON第{idx+1}项thumbnail对象指定的封面图片不存在：{pic_path}")
+            thumbnail = Thumbnail(pic_path)
             
             # 添加到任务列表
             self.video_tasks.append(
                 VideoTask(
                     video_path=video_path,
-                    audio_stream_index=audio_idx,
-                    cut_front_seconds=cut_front_sec,
-                    cut_back_seconds=cut_back_sec,
-                    subtitle_lang=sub_lang,
-                    srt_stream_index=srt_idx,
-                    pic_path=pic_path
+                    audio=audio,
+                    trim=trim,
+                    subtitle=subtitle,
+                    thumbnail=thumbnail
                 )
             )
         print(f"✅ 解析JSON完成，找到 {len(self.video_tasks)} 个视频任务")
@@ -144,12 +140,10 @@ def generate_video_json(folder_path: str, output_json_path: str, audio_stream_in
             video_path = os.path.abspath(os.path.join(folder_path, filename))
             json_data.append({
                 "video_path": video_path,
-                "audio_stream_index": audio_stream_index,
-                "cut_front_seconds": cut_front_seconds,
-                "cut_back_seconds": cut_back_seconds,
-                "subtitle_lang": default_sub_lang,
-                "srt_stream_index": default_srt_index,
-                "pic_path": default_pic_path
+                "audio": {"audio_stream_index": audio_stream_index},
+                "trim": {"cut_front_seconds": cut_front_seconds, "cut_back_seconds": cut_back_seconds},
+                "subtitle": {"subtitle_lang": default_sub_lang, "srt_stream_index": default_srt_index},
+                "thumbnail": {"pic_path": default_pic_path}
             })
     
     if not json_data:

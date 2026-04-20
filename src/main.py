@@ -4,7 +4,7 @@ import shutil
 import os
 import sys
 import argparse
-from input_parser import InputParser, generate_video_json
+from input_parser import InputParser
 from extract_audio import extract_audio, extract_audio_acc_language
 from generate_subtitles import generate_subtitles
 from embed_subtitle import embed_subtitle_to_video
@@ -66,8 +66,8 @@ def main(json_path=r"D:\waner\4_ani\json.json"):
         audio_paths.add(dir_config["audio"])
         
         # 步骤1：处理缩略图（根据是否提供 pic_path 决定是直接使用还是生成）
-        if task.pic_path:
-            thumb_path = task.pic_path
+        if task.thumbnail.pic_path:
+            thumb_path = task.thumbnail.pic_path
             stats["thumb_success"] += 1
             print(f"✅ 使用指定的缩略图：{thumb_path}")
         else:
@@ -88,16 +88,16 @@ def main(json_path=r"D:\waner\4_ani\json.json"):
         # audio_path = extract_audio(
         #     video_path=task.video_path,
         #     output_dir=dir_config["audio"],
-        #     audio_stream_index=task.audio_stream_index,
-        #     cut_front_seconds=task.cut_front_seconds,
-        #     cut_back_seconds=task.cut_back_seconds
+        #     audio_stream_index=task.audio.audio_stream_index,
+        #     cut_front_seconds=task.trim.cut_front_seconds if task.trim else 0.0,
+        #     cut_back_seconds=task.trim.cut_back_seconds if task.trim else 0.0
         # )
         audio_path = extract_audio_acc_language(
             video_path=task.video_path,
             output_dir=dir_config["audio"],
-            language=task.subtitle_lang,
-            cut_front_seconds=task.cut_front_seconds,
-            cut_back_seconds=task.cut_back_seconds
+            language=task.subtitle.subtitle_lang if task.subtitle else "de",
+            cut_front_seconds=task.trim.cut_front_seconds if task.trim else 0.0,
+            cut_back_seconds=task.trim.cut_back_seconds if task.trim else 0.0
         )
         if audio_path:
             stats["audio_success"] += 1
@@ -108,20 +108,21 @@ def main(json_path=r"D:\waner\4_ani\json.json"):
             continue
         
         # 步骤3：生成字幕（调用generate_subtitles.py）
-        if task.srt_stream_index < 0:
+        srt_index = task.subtitle.srt_stream_index if task.subtitle else -1
+        if srt_index < 0:
             srt_path = generate_subtitles(
                 audio_path=audio_path,
                 output_dir=dir_config["subtitle"],
                 model='turbo',
-                subtitle_lang=task.subtitle_lang
+                subtitle_lang=task.subtitle.subtitle_lang if task.subtitle else "de"
             )
         else:
             srt_path = extract_mkv_subtitles(
                     video_path=task.video_path,
                     output_dir=dir_config["subtitle"],
-                    target_track_indices=[task.srt_stream_index],
-                    cut_front_seconds=task.cut_front_seconds,
-                    cut_back_seconds=task.cut_back_seconds
+                    target_track_indices=[srt_index],
+                    cut_front_seconds=task.trim.cut_front_seconds if task.trim else 0.0,
+                    cut_back_seconds=task.trim.cut_back_seconds if task.trim else 0.0
                 )[0]
 
         stats["subtitle_success"] += 1
