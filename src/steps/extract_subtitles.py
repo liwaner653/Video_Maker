@@ -5,6 +5,53 @@ import re
 from datetime import timedelta
 from util import get_video_duration
 
+def extract_pgs_subtitles(video_path, output_dir, target_track_indices=None):
+    """
+    提取图像类字幕（如 hdmv_pgs_subtitle）为 .sup 格式文件。
+    注意：.sup 是图像格式，若要转为 .srt 需要使用第三方 OCR 工具 (如 SubtitleEdit)。
+    """
+    if not os.path.isfile(video_path):
+        return None
+
+    os.makedirs(output_dir, exist_ok=True)
+    
+    ffprobe_cmd = [
+        "ffprobe", "-v", "error",
+        "-show_entries", "stream=index,codec_name",
+        "-select_streams", "s", "-of", "json", video_path
+    ]
+    
+    result = subprocess.run(ffprobe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    streams = json.loads(result.stdout).get("streams", [])
+    
+    extracted_files = []
+    video_basename = os.path.splitext(os.path.basename(video_path))[0]
+    
+    for stream in streams:
+        idx = stream.get("index")
+        codec = stream.get("codec_name")
+        
+        if codec == "hdmv_pgs_subtitle":
+            if target_track_indices and idx not in target_track_indices:
+                continue
+                
+            output_file = os.path.join(output_dir, f"{video_basename}_track{idx}.sup")
+            ffmpeg_cmd = [
+                "ffmpeg", "-y", "-v", "error",
+                "-i", video_path,
+                "-map", f"0:{idx}",
+                "-c:s", "copy",  # 直接拷贝图像流
+                output_file
+            ]
+            try:
+                subprocess.run(ffmpeg_cmd, check=True)
+                print(f"   ✔️ PGS提取完成(请使用OCR转SRT): {output_file}")
+                extracted_files.append(output_file)
+            except subprocess.CalledProcessError:
+                print(f"   ❌ 提取PGS失败: 流 {idx}")
+                
+    return extracted_files
+
 def adjust_srt_timestamps(srt_path, cut_front_seconds, cut_back_seconds, video_duration):
     """
     读取 SRT 文件并根据开头和结尾裁剪秒数调整时间轴。

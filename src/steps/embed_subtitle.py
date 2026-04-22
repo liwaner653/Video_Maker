@@ -3,20 +3,42 @@
 import os
 import subprocess
 
+from steps.base_step import BaseStep
+from steps.context import TaskContext
+
+class VideoComposeStep(BaseStep):
+    @property
+    def step_name(self): return "视频合成"
+
+    def execute(self, context: TaskContext) -> bool:
+        final_video_path = embed_subtitle_to_video(
+            thumbnail_path=context.thumb_path,
+            srt_path=context.srt_path, # 可能为空
+            audio_path=context.audio_path,
+            output_dir=context.final_video_dir,
+        )
+        if final_video_path:
+            context.final_video_path = final_video_path
+            return True
+        context.error_msg = "视频合成失败"
+        return False
+        
 def embed_subtitle_to_video(
     thumbnail_path: str, 
     srt_path: str, 
     audio_path: str,
     output_dir: str
 ) -> str | None:
-    """
-    将单张图片、AAC音频和SRT字幕合成为一个视频，字幕烧录入画面。
-    """
-    # 1. 检查输入文件是否存在
-    for path, name in [(thumbnail_path, "图片"), (srt_path, "字幕"), (audio_path, "音频")]:
+    # 1. 检查必要文件（图片、音频必须存在）
+    for path, name in [(thumbnail_path, "图片"), (audio_path, "音频")]:
         if not os.path.exists(path):
             print(f"❌ 错误：{name}文件不存在 -> {path}")
             return None
+            
+    # 【新增代码】判断是否包含有效字幕
+    has_srt = srt_path and os.path.exists(srt_path)
+    if not has_srt:
+        print("⚠️ 未提供字幕或字幕不存在，将仅合成音频与图片。")
     
     # 2. 准备输出路径 (统一正斜杠，防止路径拼接报错)
     os.makedirs(output_dir, exist_ok=True)
@@ -33,33 +55,58 @@ def embed_subtitle_to_video(
     # 4. 构建 FFmpeg 命令
     command = [
         'ffmpeg', '-y',
-        
-        # --- 输入 1: 图片流 ---
-        '-loop', '1',               # 循环播放这张图片
-        '-framerate', '30',         # 设置视频帧率为30，保证画面流畅和字幕渲染正常
+        '-loop', '1',
+        '-framerate', '30',
         '-i', thumbnail_path,
+        '-i', audio_path
+    ]
+    
+    # 【新增代码】按需追加字幕滤镜
+    if has_srt:
+        safe_srt_path = srt_path.replace('\\', '/').replace(':', r'\:').replace("'", "\\'")
+        command.extend(['-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei'"])
         
-        # --- 输入 2: 音频流 ---
-        '-i', audio_path,
-        
-        # --- 滤镜: 烧录字幕 ---
-        '-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei'",
-        
-        # --- 视频编码设置 ---
+    # 编码设置
+    command.extend([
         '-c:v', 'libx264',
         '-preset', 'medium',
         '-crf', '23',
-        '-tune', 'stillimage',      # 【新增优化】专门针对静态图片的优化，能减小文件体积
-        '-pix_fmt', 'yuv420p',      # 【新增优化】色彩空间格式。如果不加，某些浏览器和手机播放会黑屏
-        
-        # --- 音频编码设置 ---
-        '-c:a', 'copy',             # 直接拷贝原音频流，无损且快速
-        
-        # --- 截断设置 ---
-        '-shortest',                # 因为图片是无限循环的，所以以音频的长度为准结束合成
-        
+        '-tune', 'stillimage',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'copy',
+        '-shortest',
         output_video_path
-    ]
+    ])
+#    # 4. 构建 FFmpeg 命令
+#    command = [
+#        'ffmpeg', '-y',
+#        
+#        # --- 输入 1: 图片流 ---
+#        '-loop', '1',               # 循环播放这张图片
+#        '-framerate', '30',         # 设置视频帧率为30，保证画面流畅和字幕渲染正常
+#        '-i', thumbnail_path,
+#        
+#        # --- 输入 2: 音频流 ---
+#        '-i', audio_path,
+#        
+#        # --- 滤镜: 烧录字幕 ---
+#        '-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei'",
+#        
+#        # --- 视频编码设置 ---
+#        '-c:v', 'libx264',
+#        '-preset', 'medium',
+#        '-crf', '23',
+#        '-tune', 'stillimage',      # 【新增优化】专门针对静态图片的优化，能减小文件体积
+#        '-pix_fmt', 'yuv420p',      # 【新增优化】色彩空间格式。如果不加，某些浏览器和手机播放会黑屏
+#        
+#        # --- 音频编码设置 ---
+#        '-c:a', 'copy',             # 直接拷贝原音频流，无损且快速
+#        
+#        # --- 截断设置 ---
+#        '-shortest',                # 因为图片是无限循环的，所以以音频的长度为准结束合成
+#        
+#        output_video_path
+#    ]
     
     print(f"📽️ 开始合成：{base_name}.mp4")
     try:

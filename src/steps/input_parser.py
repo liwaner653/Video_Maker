@@ -1,9 +1,32 @@
 # input_parser.py
 import os
 import json
-from typing import List, Optional
+from typing import List
 import argparse
+from steps.base_step import BaseStep
+from steps.context import BatchContext, TaskContext
 from video_task import VideoTask, Audio, Trim, Subtitle, Thumbnail
+
+class ParseJsonStep(BaseStep):
+    @property
+    def step_name(self): return "解析JSON输入"
+
+    def execute(self, context: BatchContext) -> bool:
+        try:
+            parser = InputParser(context.json_path)
+            for task in parser.video_tasks:
+                lang = task.subtitle.subtitle_lang if task.subtitle and task.subtitle.subtitle_lang else "und"
+                ctx = TaskContext(
+                    task=task,
+                    video_name=os.path.basename(task.video_path),
+                    lang=lang
+                )
+                context.task_contexts.append(ctx)
+            print(f"✅ 解析完成，获取 {len(context.task_contexts)} 个视频任务")
+            return True
+        except Exception as e:
+            print(f"❌ JSON解析失败: {e}")
+            return False
 
 class InputParser:
     """输入解析类：识别输入是文件夹/JSON文件，解析为统一的视频任务列表"""

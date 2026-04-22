@@ -4,6 +4,8 @@ import json
 import os
 import sys
 import subprocess
+from steps.base_step import BaseStep
+from steps.context import TaskContext
 from util import get_video_duration
 
 # 2. 语言缩写到全称映射字典
@@ -16,6 +18,25 @@ LANG_MAP = {
     'es': ['spanish', 'spa', 'es'],
     'ru': ['russian', 'rus', 'ru']
 }
+
+class AudioStep(BaseStep):
+    @property
+    def step_name(self): return "音频提取"
+
+    def execute(self, context: TaskContext) -> bool:
+        task = context.task
+        cf, cb = (task.trim.cut_front_seconds, task.trim.cut_back_seconds) if task.trim else (0.0, 0.0)
+
+        if task.subtitle and task.subtitle.subtitle_lang:
+            audio_path = extract_audio_acc_language(task.video_path, context.audio_dir, task.subtitle.subtitle_lang, cf, cb)
+        else:
+            audio_path = extract_audio(task.video_path, context.audio_dir, task.audio.audio_stream_index, cf, cb)
+        
+        if audio_path:
+            context.audio_path = audio_path
+            return True
+        context.error_msg = "音频提取失败"
+        return False
 
 # 3. 添加 extract_audio_acc_language 函数
 def extract_audio_acc_language(video_path: str, output_dir: str, language: str, cut_front_seconds: float = 0.0, cut_back_seconds: float = 0.0):

@@ -5,12 +5,39 @@ import sys
 import subprocess
 from typing import Optional
 
+from steps.base_step import BaseStep
+from steps.context import TaskContext
+
+class ThumbnailStep(BaseStep):
+    @property
+    def step_name(self): return "缩略图生成"
+
+    def execute(self, context: TaskContext) -> bool:
+        task = context.task
+        if task.thumbnail.pic_path:
+            context.thumb_path = task.thumbnail.pic_path
+            return True
+        else:
+            thumb_path = generate_thumbnail(
+                video_path=task.video_path,
+                output_dir=context.thumb_dir,
+                thumbnail_size="320:180",
+                quality=2,
+                blur_sigma=5.0 # 测试：传入模糊度
+            )
+            if thumb_path:
+                context.thumb_path = thumb_path
+                return True
+            context.error_msg = "缩略图生成失败"
+            return False
+
 def generate_thumbnail(
     video_path: str,
     output_dir: str,
     thumbnail_size: str = "320:180",
     quality: int = 2,
-    is_16grid: bool = True
+    is_16grid: bool = True,
+    blur_sigma: float = 0.0  # 【新增代码 1】增加模糊度参数，默认0(不模糊)
 ) -> Optional[str]:
     """
     生成视频缩略图（支持单帧/16宫格两种模式）
@@ -65,22 +92,30 @@ def generate_thumbnail(
         ffmpeg_cmd = ["ffmpeg", "-y", "-i", video_path, "-loglevel", "error"]
         
         if is_16grid:
-            # 5.1 16宫格模式（均匀采样16帧拼接）
-            interval = video_duration / 16  # 16帧的采样间隔
+            interval = video_duration / 16
+            # 【新增代码 2】按需拼接模糊滤镜
+            vf_str = f"fps=1/{interval},scale={thumbnail_size},tile=4x4"
+            if blur_sigma > 0:
+                vf_str += f",gblur=sigma={blur_sigma}"
+                
             ffmpeg_cmd.extend([
-                "-vf", f"fps=1/{interval},scale={thumbnail_size},tile=4x4",
-                "-frames:v", "1",  # 只输出1张拼接图
+                "-vf", vf_str,
+                "-frames:v", "1",
                 "-q:v", str(quality),
                 thumb_path
             ])
         else:
-            # 5.2 单帧模式（取视频中间帧）
             mid_time = video_duration / 2
+            # 【新增代码 3】按需拼接模糊滤镜
+            vf_str = f"scale={thumbnail_size}"
+            if blur_sigma > 0:
+                vf_str += f",gblur=sigma={blur_sigma}"
+                
             ffmpeg_cmd.extend([
-                "-ss", str(mid_time),  # 跳转到视频中间
-                "-vframes", "1",       # 只取1帧
-                "-s", thumbnail_size,  # 分辨率
-                "-q:v", str(quality),  # 质量
+                "-ss", str(mid_time),
+                "-vframes", "1",
+                "-vf", vf_str, # 将原来的 -s 替换为统一的 -vf 处理
+                "-q:v", str(quality),
                 thumb_path
             ])
         

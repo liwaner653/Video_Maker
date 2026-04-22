@@ -4,6 +4,8 @@ import subprocess
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+ERROR_SRT_FILE_SIZE_KB = 20.0  # 字幕文件小于20KB视为生成失败
+
 def generate_subtitles(audio_path: str, output_dir: str, model: str = "turbo", subtitle_lang: str = "de"):
     """
     使用Whisper生成指定语言的字幕
@@ -38,8 +40,15 @@ def generate_subtitles(audio_path: str, output_dir: str, model: str = "turbo", s
     
     try:
         result = subprocess.run(command, check=True, capture_output=True, text=True)
+        
+        # 【新增代码：校验文件大小】
+        if os.path.exists(srt_path):
+            file_size_kb = os.path.getsize(srt_path) / 1024.0
+            if file_size_kb < ERROR_SRT_FILE_SIZE_KB:
+                print(f"❌ 字幕生成失败：文件大小仅为 {file_size_kb:.2f}KB (小于{ERROR_SRT_FILE_SIZE_KB}KB)")
+                return None  # 按照需求返回失败(None)
+                
         print(f"✅ 字幕生成完成：{srt_path}")
-        print(f"result: {result}")
         return srt_path
     except FileNotFoundError:
         print("❌ Whisper 未安装或不在 PATH 中。请安装 OpenAI Whisper：pip install openai-whisper")
