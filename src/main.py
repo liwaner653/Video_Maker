@@ -8,6 +8,7 @@ from steps.context import BatchContext
 from steps.embed_subtitle import VideoComposeStep
 from steps.extract_audio import AudioStep
 from steps.generate_thumbnail import ThumbnailStep
+from steps.get_subtitle_index import GetSubtitleIndexStep
 from steps.input_parser import ParseJsonStep
 from steps.prepare_dir_step import PrepareDirStep
 from steps.subtitle_step import SubtitleStep
@@ -23,7 +24,8 @@ def main(json_path):
     video_pipeline = [PrepareDirStep(), 
                       ThumbnailStep(), 
                       AudioStep(), 
-                      # SubtitleStep(), 
+                      GetSubtitleIndexStep(),
+                      SubtitleStep(), 
                       VideoComposeStep()]
     total = len(batch_ctx.task_contexts)
     
