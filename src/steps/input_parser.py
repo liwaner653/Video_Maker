@@ -3,9 +3,9 @@ import os
 import json
 from typing import List
 import argparse
-from base_step import BaseStep
-from context import BatchContext, TaskContext
-from video_task import VideoTask, Trim, Subtitle, Thumbnail
+from steps.base_step import BaseStep
+from steps.context import BatchContext, TaskContext
+from steps.video_task import VideoTask, Trim, Subtitle, Thumbnail
 
 class ParseJsonStep(BaseStep):
     @property
@@ -58,7 +58,7 @@ class InputParser:
                         video_path=video_path,
                         trim=Trim(cut_front_seconds=0.0, cut_back_seconds=0.0),
                         subtitle=Subtitle(subtitle_lang="de"),
-                        thumbnail=Thumbnail(pic_path="")
+                        thumbnail=Thumbnail(pic_path="", blur_sigma=0.0)
                     )
                 )
         if not self.video_tasks:
@@ -79,7 +79,7 @@ class InputParser:
         
         for idx, item in enumerate(json_data):
             # 检查必填字段
-            required_fields = ['video_path', 'audio', 'thumbnail']
+            required_fields = ['video_path', 'subtitle', 'thumbnail']
             missing_fields = [f for f in required_fields if f not in item]
             if missing_fields:
                 raise ValueError(f"JSON第{idx+1}项缺少字段：{missing_fields}")
@@ -115,7 +115,10 @@ class InputParser:
             pic_path = thumbnail_data.get('pic_path', "").strip()
             if pic_path and not os.path.isfile(pic_path):
                 raise ValueError(f"JSON第{idx+1}项thumbnail对象指定的封面图片不存在：{pic_path}")
-            thumbnail = Thumbnail(pic_path)
+            blur_sigma = float(thumbnail_data.get('blur_sigma', 0.0))
+            if blur_sigma < 0:
+                blur_sigma = 0.0
+            thumbnail = Thumbnail(pic_path, blur_sigma)
             
             # 添加到任务列表
             self.video_tasks.append(
@@ -129,7 +132,7 @@ class InputParser:
         print(f"✅ 解析JSON完成，找到 {len(self.video_tasks)} 个视频任务")
 
 
-def generate_video_json(folder_path: str, output_json_path: str, cut_front_seconds=0.0, cut_back_seconds=0.0, default_sub_lang: str = "de", default_pic_path: str = ""):
+def generate_video_json(folder_path: str, output_json_path: str, cut_front_seconds=0.0, cut_back_seconds=0.0, default_sub_lang: str = "de", default_pic_path: str = "", default_blur_sigma: float = 0.0):
     """
     从视频文件夹生成JSON配置文件
     Args:
@@ -138,6 +141,7 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
         cut_front_seconds: 默认开头裁剪秒数
         cut_back_seconds: 默认结尾裁剪秒数
         default_sub_lang: 默认字幕语言，默认德语"de"
+        default_blur_sigma: 默认模糊度，默认0.0(不模糊)
     """
     if not os.path.isdir(folder_path):
         raise ValueError(f"文件夹不存在：{folder_path}")
@@ -152,7 +156,7 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
                 "video_path": video_path,
                 "trim": {"cut_front_seconds": cut_front_seconds, "cut_back_seconds": cut_back_seconds},
                 "subtitle": {"subtitle_lang": default_sub_lang},
-                "thumbnail": {"pic_path": default_pic_path}
+                "thumbnail": {"pic_path": default_pic_path, "blur_sigma": default_blur_sigma}
             })
     
     if not json_data:

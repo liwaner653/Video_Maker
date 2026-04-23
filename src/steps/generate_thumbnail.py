@@ -23,7 +23,7 @@ class ThumbnailStep(BaseStep):
                 output_dir=context.thumb_dir,
                 thumbnail_size="320:180",
                 quality=2,
-                blur_sigma=5.0 # 测试：传入模糊度
+                blur_sigma=task.thumbnail.blur_sigma
             )
             if thumb_path:
                 context.thumb_path = thumb_path

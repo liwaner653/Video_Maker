@@ -4,9 +4,9 @@ import json
 import os
 import sys
 import subprocess
-from steps.base_step import BaseStep
-from steps.context import TaskContext
-from steps.util import get_video_duration
+from .base_step import BaseStep
+from .context import TaskContext
+from .util import get_video_duration
 
 # 2. 语言缩写到全称映射字典
 LANG_MAP = {

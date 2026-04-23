@@ -46,4 +46,4 @@ def main(json_path):
     CleanupStep().run(batch_ctx)
 
 if __name__ == "__main__":
-    main(r"D:\sysu\10_myself\8_projects\Video_Maker\test\json.json")
+    main(r"C:\Users\12864\Desktop\1\json1.json")

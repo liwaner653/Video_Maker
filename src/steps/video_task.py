@@ -17,6 +17,7 @@ class Subtitle:
 class Thumbnail:
     """缩略图配置"""
     pic_path: str = ""
+    blur_sigma: float = 0.0
 
 @dataclass
 class VideoTask:
