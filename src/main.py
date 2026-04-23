@@ -5,7 +5,7 @@ import argparse
 
 from steps.cleanup_step import CleanupStep
 from steps.context import BatchContext
-from steps.embed_subtitle import VideoComposeStep
+from steps.video_compose_step import VideoComposeStep
 from steps.extract_audio import AudioStep
 from steps.generate_thumbnail import ThumbnailStep
 from steps.get_subtitle_index import GetSubtitleIndexStep
