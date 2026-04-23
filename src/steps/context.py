@@ -19,6 +19,8 @@ class TaskContext:
     srt_path: str = ""
     final_video_path: str = ""
     
+    srt_stream_index: int = -1  # SRT字幕轨道索引，-1表示未设置
+    
     status: bool = True
     error_msg: str = ""
 

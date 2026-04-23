@@ -27,10 +27,7 @@ class AudioStep(BaseStep):
         task = context.task
         cf, cb = (task.trim.cut_front_seconds, task.trim.cut_back_seconds) if task.trim else (0.0, 0.0)
 
-        if task.subtitle and task.subtitle.subtitle_lang:
-            audio_path = extract_audio_acc_language(task.video_path, context.audio_dir, task.subtitle.subtitle_lang, cf, cb)
-        else:
-            audio_path = extract_audio(task.video_path, context.audio_dir, task.audio.audio_stream_index, cf, cb)
+        audio_path = extract_audio_acc_language(task.video_path, context.audio_dir, task.subtitle.subtitle_lang, cf, cb)
         
         if audio_path:
             context.audio_path = audio_path

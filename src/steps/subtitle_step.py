@@ -21,7 +21,7 @@ class SubtitleStep(BaseStep):
     def execute(self, context: TaskContext) -> bool:
         task = context.task
         cf, cb = (task.trim.cut_front_seconds, task.trim.cut_back_seconds) if task.trim else (0.0, 0.0)
-        srt_index = task.subtitle.srt_stream_index if task.subtitle else -1
+        srt_index = context.srt_stream_index
 
         if srt_index < 0:
             srt_path = generate_subtitles(
