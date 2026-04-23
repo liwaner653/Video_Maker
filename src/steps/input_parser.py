@@ -5,7 +5,7 @@ from typing import List
 import argparse
 from steps.base_step import BaseStep
 from steps.context import BatchContext, TaskContext
-from video_task import VideoTask, Audio, Trim, Subtitle, Thumbnail
+from steps.video_task import VideoTask, Audio, Trim, Subtitle, Thumbnail
 
 class ParseJsonStep(BaseStep):
     @property

@@ -6,7 +6,7 @@ import sys
 import subprocess
 from steps.base_step import BaseStep
 from steps.context import TaskContext
-from util import get_video_duration
+from steps.util import get_video_duration
 
 # 2. 语言缩写到全称映射字典
 LANG_MAP = {
