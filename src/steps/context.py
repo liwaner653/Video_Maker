@@ -21,6 +21,9 @@ class TaskContext:
     
     srt_stream_index: int = -1  # SRT字幕轨道索引，-1表示未设置
     
+    trim_start_time: float = 0.0  # 视频剪辑开始时间（秒）
+    trim_end_time: float = 0.0    # 视频剪辑结束时间（秒）
+    
     status: bool = True
     error_msg: str = ""
 

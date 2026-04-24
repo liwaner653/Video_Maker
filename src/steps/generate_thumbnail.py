@@ -23,7 +23,9 @@ class ThumbnailStep(BaseStep):
                 output_dir=context.thumb_dir,
                 thumbnail_size="320:180",
                 quality=2,
-                blur_sigma=task.thumbnail.blur_sigma
+                blur_sigma=task.thumbnail.blur_sigma,
+                trim_start_time=context.trim_start_time,
+                trim_end_time=context.trim_end_time
             )
             if thumb_path:
                 context.thumb_path = thumb_path
@@ -37,7 +39,9 @@ def generate_thumbnail(
     thumbnail_size: str = "320:180",
     quality: int = 2,
     is_16grid: bool = True,
-    blur_sigma: float = 0.0  # 【新增代码 1】增加模糊度参数，默认0(不模糊)
+    blur_sigma: float = 0.0,  # 【新增代码 1】增加模糊度参数，默认0(不模糊)
+    trim_start_time: float = 0.0,  # 【新增代码】修剪范围开始时间（秒）
+    trim_end_time: float = 0.0     # 【新增代码】修剪范围结束时间（秒），0表示到末尾
 ) -> Optional[str]:
     """
     生成视频缩略图（支持单帧/16宫格两种模式）
@@ -46,6 +50,9 @@ def generate_thumbnail(
     :param thumbnail_size: 单个缩略图分辨率，格式"宽:高"（如320:180）
     :param quality: 图片质量（1-31，1最高，31最低）
     :param is_16grid: 是否生成16宫格缩略图（False=单帧，True=16宫格）
+    :param blur_sigma: 模糊度（0=不模糊）
+    :param trim_start_time: 修剪范围开始时间（秒）
+    :param trim_end_time: 修剪范围结束时间（秒），0表示到末尾
     :return: 生成的缩略图路径，失败返回None
     """
     # 1. 基础校验
@@ -88,15 +95,30 @@ def generate_thumbnail(
             print(f"❌ 错误：视频时长异常 -> {video_path}")
             return None
         
+        # 【新增逻辑】确定有效的修剪范围
+        effective_start = trim_start_time if trim_start_time > 0 else 0.0
+        effective_end = trim_end_time if trim_end_time > 0 else video_duration
+        effective_duration = effective_end - effective_start
+        
+        if effective_duration <= 0:
+            print(f"❌ 错误：修剪范围无效 -> 开始: {effective_start:.2f}s, 结束: {effective_end:.2f}s")
+            return None
+        
         # 5. 构建FFmpeg命令
         ffmpeg_cmd = ["ffmpeg", "-y", "-i", video_path, "-loglevel", "error"]
         
         if is_16grid:
-            interval = video_duration / 16
+            interval = effective_duration / 16
             # 【新增代码 2】按需拼接模糊滤镜
             vf_str = f"fps=1/{interval},scale={thumbnail_size},tile=4x4"
             if blur_sigma > 0:
                 vf_str += f",gblur=sigma={blur_sigma}"
+            
+            # 【新增逻辑】添加修剪范围限制
+            if effective_start > 0:
+                ffmpeg_cmd.extend(["-ss", str(effective_start)])
+            if effective_duration < video_duration:
+                ffmpeg_cmd.extend(["-t", str(effective_duration)])
                 
             ffmpeg_cmd.extend([
                 "-vf", vf_str,
@@ -105,7 +127,7 @@ def generate_thumbnail(
                 thumb_path
             ])
         else:
-            mid_time = video_duration / 2
+            mid_time = effective_start + effective_duration / 2
             # 【新增代码 3】按需拼接模糊滤镜
             vf_str = f"scale={thumbnail_size}"
             if blur_sigma > 0:

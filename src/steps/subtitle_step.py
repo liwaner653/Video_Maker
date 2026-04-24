@@ -20,7 +20,9 @@ class SubtitleStep(BaseStep):
 
     def execute(self, context: TaskContext) -> bool:
         task = context.task
-        cf, cb = (task.trim.cut_front_seconds, task.trim.cut_back_seconds) if task.trim else (0.0, 0.0)
+        # 使用TaskContext中的修剪时间
+        start_time = context.trim_start_time
+        end_time = context.trim_end_time
         srt_index = context.srt_stream_index
 
         if srt_index < 0:
@@ -31,7 +33,7 @@ class SubtitleStep(BaseStep):
                 subtitle_lang=task.subtitle.subtitle_lang if task.subtitle else "de"
             )
         else:
-            subtitles = extract_mkv_subtitles(task.video_path, context.subtitle_dir, [srt_index], cf, cb)
+            subtitles = extract_mkv_subtitles(task.video_path, context.subtitle_dir, [srt_index], start_time, end_time)
             srt_path = subtitles[0] if subtitles else None
 
         # 需求6：如果字幕生成失败或被判断为无效，不中断，赋空值继续
@@ -90,16 +92,18 @@ def extract_pgs_subtitles(video_path, output_dir, target_track_indices=None):
                 
     return extracted_files
 
-def adjust_srt_timestamps(srt_path, cut_front_seconds, cut_back_seconds, video_duration):
+def adjust_srt_timestamps(srt_path, start_time, end_time):
     """
-    读取 SRT 文件并根据开头和结尾裁剪秒数调整时间轴。
+    读取 SRT 文件并根据时间范围调整时间轴。
+    :param srt_path: SRT文件路径
+    :param start_time: 范围开始时间（秒）
+    :param end_time: 范围结束时间（秒）
     """
-    if cut_front_seconds <= 0 and cut_back_seconds <= 0:
+    if start_time <= 0 and end_time <= 0:
         return
 
-    front_td = timedelta(seconds=cut_front_seconds)
-    # 计算截止的时间点
-    end_threshold_s = video_duration - cut_back_seconds if cut_back_seconds > 0 else video_duration
+    front_td = timedelta(seconds=start_time)
+    end_threshold_s = end_time if end_time > 0 else float('inf')
     
     with open(srt_path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -134,20 +138,20 @@ def adjust_srt_timestamps(srt_path, cut_front_seconds, cut_back_seconds, video_d
             except Exception:
                 continue
 
-            # --- 结尾裁剪逻辑 ---
+            # --- 结尾限制逻辑 ---
             # 如果字幕的开始时间已经超过了保留部分的截止点，直接舍弃
-            if cut_back_seconds > 0 and start_td.total_seconds() >= end_threshold_s:
+            if end_time > 0 and start_td.total_seconds() >= end_threshold_s:
                 continue
             # 如果字幕横跨了截止点，将其结束时间缩减至截止点
-            if cut_back_seconds > 0 and end_td.total_seconds() > end_threshold_s:
+            if end_time > 0 and end_td.total_seconds() > end_threshold_s:
                 end_td = timedelta(seconds=end_threshold_s)
 
-            # --- 开头裁剪逻辑 ---
+            # --- 开头限制逻辑 ---
             # 减去开头的偏移量
             start_td -= front_td
             end_td -= front_td
 
-            # 如果在开头裁剪后，该句字幕结束时间小于0，跳过
+            # 如果在开头限制后，该句字幕结束时间小于0，跳过
             if end_td.total_seconds() < 0:
                 continue
             # 如果开始时间小于0，置为0
@@ -167,20 +171,20 @@ def adjust_srt_timestamps(srt_path, cut_front_seconds, cut_back_seconds, video_d
         f.write('\n\n'.join(new_blocks) + '\n')
 
 
-def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, cut_front_seconds=0, cut_back_seconds=0):
+def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, start_time=0.0, end_time=0.0):
     """
-    分析 MKV 视频并提取所有文本字幕轨为 SRT 文件。支持双向裁剪时间轴。
+    分析 MKV 视频并提取所有文本字幕轨为 SRT 文件。支持时间范围限制。
+    :param video_path: 视频文件路径
+    :param output_dir: 输出目录
+    :param target_track_indices: 要提取的轨道索引列表
+    :param start_time: 提取的开始时间（秒）
+    :param end_time: 提取的结束时间（秒），0表示到末尾
     """
     if not os.path.isfile(video_path):
         print(f"❌ 错误: 找不到文件 {video_path}")
         return None
 
     os.makedirs(output_dir, exist_ok=True)
-    
-    # 如果需要裁剪结尾，先获取视频时长
-    video_duration = 0.0
-    if cut_back_seconds > 0:
-        video_duration = get_video_duration(video_path)
 
     print(f"正在分析视频: {video_path} ...\n")
     
@@ -230,12 +234,10 @@ def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, cut
         try:
             subprocess.run(ffmpeg_cmd, check=True)
             
-            # 处理时间轴裁剪
-            if cut_front_seconds > 0 or cut_back_seconds > 0:
-                print(f"   ⏱️ 正在根据裁剪参数调整字幕时间轴...")
-                # 如果没获取过时长但又需要它（应对逻辑严谨性），则在此获取
-                if video_duration == 0: video_duration = get_video_duration(video_path)
-                adjust_srt_timestamps(output_file, cut_front_seconds, cut_back_seconds, video_duration)
+            # 处理时间范围限制
+            if start_time > 0 or end_time > 0:
+                print(f"   ⏱️ 正在根据时间范围调整字幕时间轴...")
+                adjust_srt_timestamps(output_file, start_time, end_time)
 
             print(f"   ✔️ 提取完成: {output_file}")
             extracted_files.append(output_file)

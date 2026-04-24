@@ -7,6 +7,8 @@ class Trim:
     """视频裁剪配置"""
     cut_front_seconds: float = 0.0
     cut_back_seconds: float = 0.0
+    begin_chapter: str = ""  # 开始章节名称
+    end_chapter: str = ""    # 结束章节名称
 
 @dataclass
 class Subtitle:

@@ -45,10 +45,6 @@ def embed_subtitle_to_video(
     base_name = os.path.splitext(os.path.basename(audio_path))[0]
     output_video_path = os.path.join(output_dir, f"{base_name}.mp4").replace('\\', '/')
     
-    if os.path.exists(output_video_path):
-        print(f"⚠️ 视频已存在，跳过：{output_video_path}")
-        return None
-
     # 3. 处理字幕路径 (关键修复：转义Windows盘符冒号，防止FFmpeg解析失败)
     safe_srt_path = srt_path.replace('\\', '/').replace(':', r'\:').replace("'", "\\'")
     

@@ -25,9 +25,12 @@ class AudioStep(BaseStep):
 
     def execute(self, context: TaskContext) -> bool:
         task = context.task
-        cf, cb = (task.trim.cut_front_seconds, task.trim.cut_back_seconds) if task.trim else (0.0, 0.0)
+        # 使用TaskContext中的修剪时间
+        start_time = context.trim_start_time
+        end_time = context.trim_end_time
+        duration = end_time - start_time if end_time > 0 else 0.0
 
-        audio_path = extract_audio_acc_language(task.video_path, context.audio_dir, task.subtitle.subtitle_lang, cf, cb)
+        audio_path = extract_audio_acc_language(task.video_path, context.audio_dir, task.subtitle.subtitle_lang, start_time, duration)
         
         if audio_path:
             context.audio_path = audio_path
@@ -36,9 +39,14 @@ class AudioStep(BaseStep):
         return False
 
 # 3. 添加 extract_audio_acc_language 函数
-def extract_audio_acc_language(video_path: str, output_dir: str, language: str, cut_front_seconds: float = 0.0, cut_back_seconds: float = 0.0):
+def extract_audio_acc_language(video_path: str, output_dir: str, language: str, start_time: float = 0.0, duration: float = 0.0):
     """
     根据给定的语言缩写，智能匹配并提取对应的音轨
+    :param video_path: 视频文件路径
+    :param output_dir: 输出目录
+    :param language: 语言代码
+    :param start_time: 提取开始时间（秒）
+    :param duration: 提取时长（秒），0表示提取到末尾
     """
     target_langs = LANG_MAP.get(language.lower(), [language.lower()])
     
@@ -79,16 +87,16 @@ def extract_audio_acc_language(video_path: str, output_dir: str, language: str, 
     print(f"✅ 匹配到语言音轨 -> {matched_info}")
     
     # 取第一个执行 extract_audio 并返回生成的路径(等效于True并向后续传递参数)
-    return extract_audio(video_path, output_dir, matched_stream_index, cut_front_seconds, cut_back_seconds)
+    return extract_audio(video_path, output_dir, matched_stream_index, start_time, duration)
 
-def extract_audio(video_path: str, output_dir: str, audio_stream_index: int = 0, cut_front_seconds: float = 0.0, cut_back_seconds: float = 0.0):
+def extract_audio(video_path: str, output_dir: str, audio_stream_index: int = 0, start_time: float = 0.0, duration: float = 0.0):
     """
     提取视频指定音轨的音频（AAC编码）
     :param video_path: 视频文件路径
     :param output_dir: 音频输出目录
     :param audio_stream_index: 音频轨道索引（默认0）
-    :param cut_front_seconds: 裁剪开头秒数（默认0，不裁剪）
-    :param cut_back_seconds: 裁剪结尾秒数（默认0，不裁剪）
+    :param start_time: 提取开始时间（秒）
+    :param duration: 提取时长（秒），0表示提取到末尾
     :return: 生成的音频文件路径，失败返回None
     """
     if not os.path.exists(video_path):
@@ -102,28 +110,13 @@ def extract_audio(video_path: str, output_dir: str, audio_stream_index: int = 0,
     audio_name = os.path.splitext(video_name)[0] + '.aac'
     audio_path = os.path.join(output_dir, audio_name)
     
-    # 构建ffmpeg命令 (按照从左到右顺序拼接)
+    # 构建ffmpeg命令
     command = ["ffmpeg"]
     
-    # 处理开头裁剪（-ss 放在 -i 前更高效）
-    if cut_front_seconds > 0:
-        command.extend(["-ss", str(cut_front_seconds)])
-        
-    # 处理结尾裁剪
-    if cut_back_seconds > 0:
-        duration = get_video_duration(video_path)
-        if duration > 0:
-            end_time = duration - cut_back_seconds
-            # 参数校验：防止开头和结尾裁剪加起来超过视频总时长
-            if end_time <= cut_front_seconds:
-                print(f"错误：视频总时长({duration:.2f}s) 不足以进行开头({cut_front_seconds}s)和结尾({cut_back_seconds}s)的裁剪！")
-                return None
-            # -to 放在 -i 之前，表示读取文件直到该时间点
-            command.extend(["-to", str(end_time)])
-        else:
-            print("错误：无法获取视频时长，无法完成结尾裁剪。")
-            return None
-            
+    # 使用开始时间
+    if start_time > 0:
+        command.extend(["-ss", str(start_time)])
+    
     # 追加剩余参数
     command.extend([
         "-i", video_path,
@@ -131,8 +124,13 @@ def extract_audio(video_path: str, output_dir: str, audio_stream_index: int = 0,
         "-vn",  # 不处理视频流
         "-acodec", "aac",  # AAC编码
         "-y",  # 覆盖已有文件
-        audio_path
     ])
+    
+    # 如果指定了duration，则添加-t参数
+    if duration > 0:
+        command.extend(["-t", str(duration)])
+    
+    command.append(audio_path)
     
     print(f"开始提取音频：{video_name} (音轨{audio_stream_index})")
     print(f"执行命令: {' '.join(command)}")
