@@ -10,6 +10,11 @@ from typing import Optional
 from steps.base_step import BaseStep
 from steps.context import TaskContext
 from steps.util import get_video_duration
+from steps.subtitle.subtitle_handler import (
+    SubtitleHandlerFactory,
+    CodecToFormatMapper,
+    SubtitleHandler
+)
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -208,14 +213,31 @@ def adjust_srt_timestamps(srt_path, start_time, end_time):
         f.write('\n\n'.join(new_blocks) + '\n')
 
 
+def _adjust_subtitle_timestamps(subtitle_path: str, start_time: float, end_time: float) -> None:
+    """
+    根据文件格式自动选择处理器并调整字幕时间戳
+    :param subtitle_path: 字幕文件路径
+    :param start_time: 开始时间（秒）
+    :param end_time: 结束时间（秒）
+    """
+    handler = SubtitleHandlerFactory.get_handler(subtitle_path)
+    if handler:
+        handler.adjust_timestamps(start_time, end_time)
+    else:
+        print(f"   ⚠️ 不支持的字幕格式，跳过时间调整")
+
+
 def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, start_time=0.0, end_time=0.0):
     """
-    分析 MKV 视频并提取所有文本字幕轨为 SRT 文件。支持时间范围限制。
+    分析 MKV 视频并提取所有文本字幕轨。根据字幕编码格式输出不同的文件后缀。
+    支持 SRT、ASS、VTT 等多种格式，并支持时间范围限制。
+    
     :param video_path: 视频文件路径
     :param output_dir: 输出目录
     :param target_track_indices: 要提取的轨道索引列表
     :param start_time: 提取的开始时间（秒）
     :param end_time: 提取的结束时间（秒），0表示到末尾
+    :return: 提取的字幕文件列表
     """
     if not os.path.isfile(video_path):
         print(f"❌ 错误: 找不到文件 {video_path}")
@@ -255,31 +277,37 @@ def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, sta
         tags = stream.get("tags", {})
         language = tags.get("language", "und")
         
-        if codec_name in ["hdmv_pgs_subtitle", "dvd_subtitle"]:
+        # 跳过图像类字幕格式
+        if CodecToFormatMapper.is_image_based_format(codec_name):
+            print(f"   ⏭️ 跳过图像类字幕轨（{codec_name}）: 流 {stream_index}")
             continue
-            
-        output_filename = f"{video_basename}_track{stream_index}.srt"
+        
+        # 根据编码获取输出格式和文件后缀
+        ffmpeg_format, file_ext = CodecToFormatMapper.get_output_format_and_ext(codec_name)
+        
+        output_filename = f"{video_basename}_track{stream_index}.{file_ext}"
         output_file = os.path.join(output_dir, output_filename)
 
+        # 构建 FFmpeg 命令
         ffmpeg_cmd = [
             "ffmpeg", "-y", "-v", "error",
             "-i", video_path,
             "-map", f"0:{stream_index}",
-            "-c:s", "srt", output_file
+            "-c:s", ffmpeg_format, output_file
         ]
 
         try:
             subprocess.run(ffmpeg_cmd, check=True)
+            print(f"   ✔️ 提取完成 ({codec_name}): {output_file}")
             
             # 处理时间范围限制
             if start_time > 0 or end_time > 0:
-                print(f"   ⏱️ 正在根据时间范围调整字幕时间轴...")
-                adjust_srt_timestamps(output_file, start_time, end_time)
-
-            print(f"   ✔️ 提取完成: {output_file}")
+                print(f"      ⏱️ 正在调整字幕时间轴...")
+                _adjust_subtitle_timestamps(output_file, start_time, end_time)
+            
             extracted_files.append(output_file)
         except subprocess.CalledProcessError:
-            print(f"   ❌ 提取失败: 流 {stream_index}")
+            print(f"   ❌ 提取失败: 流 {stream_index} ({codec_name})")
 
     return extracted_files
 
