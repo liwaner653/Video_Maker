@@ -18,6 +18,14 @@ class ThumbnailStep(BaseStep):
             context.thumb_path = task.thumbnail.pic_path
             return True
         else:
+            # 如果check_exist为True，检查输出目录中是否存在同名缩略图文件
+            if task.thumbnail.check_exist:
+                existing_thumb = self._find_existing_thumbnail(task.video_path, context.thumb_dir)
+                if existing_thumb:
+                    print(f"✅ 检测到已存在的缩略图文件：{existing_thumb}")
+                    context.thumb_path = existing_thumb
+                    return True
+            
             thumb_path = generate_thumbnail(
                 video_path=task.video_path,
                 output_dir=context.thumb_dir,
@@ -32,6 +40,33 @@ class ThumbnailStep(BaseStep):
                 return True
             context.error_msg = "缩略图生成失败"
             return False
+    
+    def _find_existing_thumbnail(self, video_path: str, output_dir: str) -> Optional[str]:
+        """
+        查找输出目录中是否存在与视频文件同名的缩略图文件
+        会检查_16grid.jpg和_thumb.jpg两种格式
+        
+        :param video_path: 视频文件路径
+        :param output_dir: 输出目录
+        :return: 存在则返回完整路径，否则返回None
+        """
+        if not os.path.exists(output_dir):
+            return None
+        
+        video_name = os.path.basename(video_path)
+        name_no_ext = os.path.splitext(video_name)[0]
+        
+        # 尝试_16grid.jpg格式（默认）
+        thumb_16grid = os.path.join(output_dir, name_no_ext + "_16grid.jpg")
+        if os.path.isfile(thumb_16grid):
+            return thumb_16grid
+        
+        # 尝试_thumb.jpg格式（单帧）
+        thumb_single = os.path.join(output_dir, name_no_ext + "_thumb.jpg")
+        if os.path.isfile(thumb_single):
+            return thumb_single
+        
+        return None
 
 def generate_thumbnail(
     video_path: str,

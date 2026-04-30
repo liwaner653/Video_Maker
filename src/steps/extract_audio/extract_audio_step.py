@@ -38,10 +38,19 @@ class AudioStep(BaseStep):
         end_time = context.trim_end_time
         duration = end_time - start_time if end_time > 0 else 0.0
 
+        # 如果check_exist为True，检查输出目录中是否存在同名音频文件
+        if task.audio and task.audio.check_exist:
+            existing_audio = self._find_existing_audio(task.video_path, context.audio_dir)
+            if existing_audio:
+                print(f"✅ 检测到已存在的音频文件：{existing_audio}")
+                context.audio_path = existing_audio
+                return True
+
         # 先尝试根据语言找到对应的音轨
+        audio_stream_index = task.audio.audio_stream_index if task.audio else 0
         audio_stream_index = find_audio_stream_by_language(
             task.video_path, 
-            task.subtitle.subtitle_lang
+            task.subtitle.subtitle_lang if task.subtitle else "de"
         )
         
         if audio_stream_index < 0:
@@ -62,6 +71,31 @@ class AudioStep(BaseStep):
             return True
         context.error_msg = "音频提取失败"
         return False
+    
+    def _find_existing_audio(self, video_path: str, output_dir: str) -> Optional[str]:
+        """
+        查找输出目录中是否存在与视频文件同名的音频文件
+        会尝试多种常见的音频扩展名
+        
+        :param video_path: 视频文件路径
+        :param output_dir: 输出目录
+        :return: 存在则返回完整路径，否则返回None
+        """
+        if not os.path.exists(output_dir):
+            return None
+        
+        video_name = os.path.basename(video_path)
+        name_no_ext = os.path.splitext(video_name)[0]
+        
+        # 尝试多种常见的音频扩展名
+        audio_extensions = ['.aac', '.ac3', '.eac3', '.mp3', '.flac', '.wav', '.m4a', '.opus']
+        
+        for ext in audio_extensions:
+            audio_file = os.path.join(output_dir, name_no_ext + ext)
+            if os.path.isfile(audio_file):
+                return audio_file
+        
+        return None
 
 # ===================== 辅助函数 =====================
 

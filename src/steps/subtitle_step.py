@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+from typing import Optional
 
 from steps.base_step import BaseStep
 from steps.context import TaskContext
@@ -25,6 +26,14 @@ class SubtitleStep(BaseStep):
         end_time = context.trim_end_time
         srt_index = context.srt_stream_index
 
+        # 如果check_exist为True，检查输出目录中是否存在同名字幕文件
+        if task.subtitle and task.subtitle.check_exist:
+            existing_srt = self._find_existing_subtitle(task.video_path, context.subtitle_dir)
+            if existing_srt:
+                print(f"✅ 检测到已存在的字幕文件：{existing_srt}")
+                context.srt_path = existing_srt
+                return True
+
         if srt_index < 0:
             srt_path = generate_subtitles(
                 audio_path=context.audio_path,
@@ -43,6 +52,34 @@ class SubtitleStep(BaseStep):
             print("⚠️ 字幕处理失败或文件无效，将跳过字幕烧录。")
             context.srt_path = "" 
         return True # 始终返回True，允许后续合成执行
+    
+    def _find_existing_subtitle(self, video_path: str, output_dir: str) -> Optional[str]:
+        """
+        查找输出目录中是否存在与视频文件同名的字幕文件
+        
+        :param video_path: 视频文件路径
+        :param output_dir: 输出目录
+        :return: 存在则返回完整路径，否则返回None
+        """
+        if not os.path.exists(output_dir):
+            return None
+        
+        video_name = os.path.basename(video_path)
+        name_no_ext = os.path.splitext(video_name)[0]
+        
+        # 尝试.srt格式（最常见）
+        srt_file = os.path.join(output_dir, name_no_ext + ".srt")
+        if os.path.isfile(srt_file):
+            return srt_file
+        
+        # 尝试其他字幕格式
+        subtitle_extensions = ['.ass', '.ssa', '.sub', '.vtt']
+        for ext in subtitle_extensions:
+            subtitle_file = os.path.join(output_dir, name_no_ext + ext)
+            if os.path.isfile(subtitle_file):
+                return subtitle_file
+        
+        return None
 
 
 def extract_pgs_subtitles(video_path, output_dir, target_track_indices=None):

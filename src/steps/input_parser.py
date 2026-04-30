@@ -5,7 +5,7 @@ from typing import List
 import argparse
 from steps.base_step import BaseStep
 from steps.context import BatchContext, TaskContext
-from steps.video_task import VideoTask, Trim, Subtitle, Thumbnail
+from steps.video_task import VideoTask, Trim, Audio, Subtitle, Thumbnail
 
 class ParseJsonStep(BaseStep):
     @property
@@ -56,9 +56,10 @@ class InputParser:
                 self.video_tasks.append(
                     VideoTask(
                         video_path=video_path,
+                        audio=Audio(audio_stream_index=0, check_exist=False),
                         trim=Trim(cut_front_seconds=0.0, cut_back_seconds=0.0, begin_chapter="", end_chapter=""),
-                        subtitle=Subtitle(subtitle_lang="de"),
-                        thumbnail=Thumbnail(pic_path="", blur_sigma=0.0)
+                        subtitle=Subtitle(subtitle_lang="de", check_exist=False),
+                        thumbnail=Thumbnail(pic_path="", blur_sigma=0.0, check_exist=False)
                     )
                 )
         if not self.video_tasks:
@@ -89,6 +90,14 @@ class InputParser:
             if not os.path.isfile(video_path):
                 raise ValueError(f"JSON第{idx+1}项视频文件不存在：{video_path}")
             
+            # 解析可选的audio对象
+            audio = None
+            if 'audio' in item:
+                audio_data = item['audio']
+                audio_stream_index = int(audio_data.get('audio_stream_index', 0))
+                check_exist = bool(audio_data.get('check_exist', False))
+                audio = Audio(audio_stream_index=audio_stream_index, check_exist=check_exist)
+            
             # 解析可选的trim对象
             trim = None
             if 'trim' in item:
@@ -110,7 +119,8 @@ class InputParser:
                 sub_lang = sub_data['subtitle_lang'].strip()
                 if not sub_lang:
                     raise ValueError(f"JSON第{idx+1}项字幕语言不能为空")
-                subtitle = Subtitle(sub_lang)
+                check_exist = bool(sub_data.get('check_exist', False))
+                subtitle = Subtitle(sub_lang, check_exist=check_exist)
             
             # 解析thumbnail对象
             thumbnail_data = item['thumbnail']
@@ -120,12 +130,14 @@ class InputParser:
             blur_sigma = float(thumbnail_data.get('blur_sigma', 0.0))
             if blur_sigma < 0:
                 blur_sigma = 0.0
-            thumbnail = Thumbnail(pic_path, blur_sigma)
+            check_exist = bool(thumbnail_data.get('check_exist', False))
+            thumbnail = Thumbnail(pic_path, blur_sigma, check_exist=check_exist)
             
             # 添加到任务列表
             self.video_tasks.append(
                 VideoTask(
                     video_path=video_path,
+                    audio=audio,
                     trim=trim,
                     subtitle=subtitle,
                     thumbnail=thumbnail
