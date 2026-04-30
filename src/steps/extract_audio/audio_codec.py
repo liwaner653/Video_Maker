@@ -169,6 +169,21 @@ class VorbisCodecHandler(AudioCodecHandler):
         return ["-acodec", "copy"]
 
 
+class TrueHDCodecHandler(AudioCodecHandler):
+    """TrueHD编码处理器（Dolby TrueHD无损音频）"""
+    
+    @property
+    def codec_name(self) -> str:
+        return "truehd"
+    
+    @property
+    def output_extension(self) -> str:
+        return ".mka"
+    
+    def get_ffmpeg_codec_args(self) -> list:
+        return ["-acodec", "copy"]
+
+
 class AudioCodecRegistry:
     """音频编码处理器注册表，管理所有支持的编码"""
     
@@ -187,6 +202,7 @@ class AudioCodecRegistry:
             DTSCodecHandler(),
             OpusCodecHandler(),
             VorbisCodecHandler(),
+            TrueHDCodecHandler(),
         ]
         for handler in handlers:
             self.register(handler)
