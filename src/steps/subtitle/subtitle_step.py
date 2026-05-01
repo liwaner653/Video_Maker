@@ -301,6 +301,12 @@ def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, sta
             subprocess.run(ffmpeg_cmd, check=True)
             print(f"   ✔️ 提取完成 ({codec_name}): {output_file}")
             
+            # 清除 SRT 字幕中的样式标签
+            print(f"      🧹  正在清除字幕样式...")
+            handler = SubtitleHandlerFactory.get_handler(output_file)
+            if handler:
+                handler.clean_styles()
+            
             # 处理时间范围限制
             if start_time > 0 or end_time > 0:
                 print(f"      ⏱️ 正在调整字幕时间轴...")
@@ -353,7 +359,7 @@ def generate_subtitles(audio_path: str, output_dir: str, model: str = "turbo", s
             if file_size_kb < ERROR_SRT_FILE_SIZE_KB:
                 print(f"❌ 字幕生成失败：文件大小仅为 {file_size_kb:.2f}KB (小于{ERROR_SRT_FILE_SIZE_KB}KB)")
                 return None  # 按照需求返回失败(None)
-                
+            
         print(f"✅ 字幕生成完成：{srt_path}")
         return srt_path
     except FileNotFoundError:

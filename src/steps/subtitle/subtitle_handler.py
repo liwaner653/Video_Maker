@@ -57,6 +57,46 @@ class SrtSubtitleHandler(SubtitleHandler):
         milliseconds = int(td.microseconds / 1000)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
     
+    def clean_styles(self) -> None:
+        """
+        清除 SRT 字幕中的所有样式标签
+        包括：HTML 标签、ASS 格式标签、字体标签等
+        """
+        with open(self.file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        blocks = re.split(r'\n\n+', content.strip())
+        new_blocks = []
+        
+        for block in blocks:
+            lines = block.strip().split('\n')
+            if len(lines) < 3:
+                new_blocks.append(block)
+                continue
+            
+            # 保留序号和时间行
+            new_lines = lines[:2]
+            
+            # 处理文本行：清除所有样式标签
+            for text_line in lines[2:]:
+                # 清除 ASS 格式标签 {\c&Hnnnnn&} 等
+                text_line = re.sub(r'\{[^}]*\}', '', text_line)
+                # 清除 HTML/XML 标签 <tag>...</tag>
+                text_line = re.sub(r'<[^>]+>', '', text_line)
+                # 清除 HTML 实体 &#...;
+                text_line = re.sub(r'&#\d+;', '', text_line)
+                # 清除多余空白
+                text_line = text_line.strip()
+                if text_line:  # 只保留非空行
+                    new_lines.append(text_line)
+            
+            # 只有包含实际文本的块才保留
+            if len(new_lines) > 2:
+                new_blocks.append('\n'.join(new_lines))
+        
+        with open(self.file_path, 'w', encoding='utf-8') as f:
+            f.write('\n\n'.join(new_blocks) + '\n')
+
     def adjust_timestamps(self, start_time: float, end_time: float) -> None:
         """调整 SRT 字幕时间戳"""
         if start_time <= 0 and end_time <= 0:

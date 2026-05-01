@@ -60,7 +60,7 @@ def embed_subtitle_to_video(
     # 【新增代码】按需追加字幕滤镜
     if has_srt:
         safe_srt_path = srt_path.replace('\\', '/').replace(':', r'\:').replace("'", "\\'")
-        command.extend(['-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei',FontSize=16"])
+        command.extend(['-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei,FontSize=16'"])
         
     # 编码设置
     command.extend([
