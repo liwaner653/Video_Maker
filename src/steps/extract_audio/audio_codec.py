@@ -178,10 +178,10 @@ class TrueHDCodecHandler(AudioCodecHandler):
     
     @property
     def output_extension(self) -> str:
-        return ".mka"
+        return ".aac"
     
     def get_ffmpeg_codec_args(self) -> list:
-        return ["-acodec", "copy"]
+        return ["-acodec", "aac"]
 
 
 class AudioCodecRegistry:
