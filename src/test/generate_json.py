@@ -26,14 +26,27 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
             video_path = os.path.abspath(os.path.join(folder_path, filename))
             json_data.append({
                 "video_path": video_path,
+                "audio": {
+                    "check_exist": True
+                },
                 "trim": {
                     "cut_front_seconds": cut_front_seconds, 
                     "cut_back_seconds": cut_back_seconds,
                     "begin_chapter": begin_chapter,
                     "end_chapter": end_chapter
                 },
-                "subtitle": {"subtitle_lang": default_sub_lang},
-                "thumbnail": {"pic_path": default_pic_path, "blur_sigma": default_blur_sigma}
+                "thumbnail": {
+                    "pic_path": default_pic_path,
+                    "blur_sigma": default_blur_sigma,
+                    "check_exist": True
+                },
+                "subtitle": {
+                    "subtitle_lang": default_sub_lang,
+                    "check_exist": True
+                },
+                "final_video": {
+                    "check_exist": True
+                }
             })
     
     if not json_data:
