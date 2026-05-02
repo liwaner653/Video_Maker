@@ -30,6 +30,11 @@ class Thumbnail:
     check_exist: bool = False  # 是否检查输出目录中的同名文件是否存在
 
 @dataclass
+class FinalVideo:
+    """最终视频配置"""
+    check_exist: bool = False  # 如果为true，则跳过video_compose_step步骤；为false，则覆盖文件
+
+@dataclass
 class VideoTask:
     """视频任务数据类，保存单个视频的解析结果（支持扩展新字段）"""
     video_path: str          # 视频文件完整路径
@@ -37,3 +42,4 @@ class VideoTask:
     trim: Optional[Trim] = None  # 裁剪配置，可选
     subtitle: Optional[Subtitle] = None  # 字幕配置，可选
     thumbnail: Thumbnail = field(default_factory=Thumbnail)  # 缩略图配置
+    final_video: FinalVideo = field(default_factory=FinalVideo)  # 最终视频配置

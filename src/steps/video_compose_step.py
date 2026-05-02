@@ -11,6 +11,19 @@ class VideoComposeStep(BaseStep):
     def step_name(self): return "视频合成"
 
     def execute(self, context: TaskContext) -> bool:
+        # 检查 final_video.check_exist 配置
+        if context.task.final_video.check_exist:
+            # 计算预期的输出路径
+            base_name = os.path.splitext(os.path.basename(context.audio_path))[0]
+            expected_video_path = os.path.join(context.final_video_dir, f"{base_name}.mp4")
+            
+            if os.path.exists(expected_video_path):
+                print(f"⏭️ 跳过视频合成（check_exist=true，文件已存在）: {expected_video_path}")
+                context.final_video_path = expected_video_path
+                return True
+            else:
+                print(f"⚠️ check_exist=true 但文件不存在，将继续生成: {expected_video_path}")
+        
         final_video_path = embed_subtitle_to_video(
             thumbnail_path=context.thumb_path,
             srt_path=context.srt_path, # 可能为空

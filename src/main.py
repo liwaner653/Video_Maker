@@ -3,7 +3,7 @@
 import sys
 import argparse
 
-from steps.cleanup_step import CleanupStep
+from steps.post_processing_step import PostProcessingStep
 from steps.context import BatchContext
 from steps.video_compose_step import VideoComposeStep
 from steps.extract_audio.extract_audio_step import AudioStep
@@ -11,7 +11,7 @@ from steps.generate_thumbnail import ThumbnailStep
 from steps.get_subtitle_index import GetSubtitleIndexStep
 from steps.input_parser import ParseJsonStep
 from steps.prepare_dir_step import PrepareDirStep
-from steps.subtitle_step import SubtitleStep
+from steps.subtitle.subtitle_step import SubtitleStep
 from steps.calc_trim_time import CalcTrimTimeStep
 
 
@@ -44,8 +44,8 @@ def main(json_path):
     success = sum(1 for c in batch_ctx.task_contexts if c.status)
     print("\n" + "="*70 + f"\n📊 统计：成功 {success}/{total} \n" + "="*70)
 
-    # 阶段3：统一清理
-    # CleanupStep().run(batch_ctx)
+    # 阶段3：后处理（清理临时文件和上传subtitles）
+    PostProcessingStep().run(batch_ctx)
 
 if __name__ == "__main__":
-    main(r"D:\waner\4_ani\programs\Video_Maker\test\one piece\json.json")
+    main(r"C:\Users\12864\Desktop\kimi\json.json")
