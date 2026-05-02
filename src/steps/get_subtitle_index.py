@@ -132,7 +132,7 @@ class GetSubtitleIndexStep(BaseStep):
         
         # 使用字幕语言作为过滤条件
         subtitle_lang = task.subtitle.subtitle_lang
-        target_titles = ['cc', 'sdh']
+        target_titles = ['cc', 'sdh', 'dubtitle']
         
         matching_indices = get_target_subtitle_indices(
             video_path=task.video_path,
