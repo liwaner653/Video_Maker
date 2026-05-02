@@ -58,7 +58,7 @@ class PostProcessingStep(BaseStep):
             parent_dir_name = os.path.basename(subtitle_parent_dir)
             
             # 构建新的文件夹名称: "parent_folder_name_language"
-            new_folder_name = f"{parent_dir_name}_{ctx.lang}"
+            new_folder_name = f"{parent_dir_name} {ctx.lang}"
             new_path = os.path.join(git_repo_path, new_folder_name)
             
             try:
