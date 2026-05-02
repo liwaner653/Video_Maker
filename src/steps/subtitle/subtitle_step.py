@@ -284,7 +284,7 @@ def extract_mkv_subtitles(video_path, output_dir, target_track_indices=None, sta
         
         # 根据编码获取输出格式和文件后缀
         # ffmpeg_format, file_ext = CodecToFormatMapper.get_output_format_and_ext(codec_name)
-        ffmpeg_format, file_ext = 'srt', '.srt'  # 目前统一输出为SRT格式，后续可根据需要调整
+        ffmpeg_format, file_ext = 'srt', 'srt'  # 目前统一输出为SRT格式，后续可根据需要调整
 
         output_filename = f"{video_basename}_track{stream_index}.{file_ext}"
         output_file = os.path.join(output_dir, output_filename)
