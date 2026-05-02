@@ -5,7 +5,7 @@ from typing import List
 import argparse
 from steps.base_step import BaseStep
 from steps.context import BatchContext, TaskContext
-from steps.video_task import VideoTask, Trim, Audio, Subtitle, Thumbnail
+from steps.video_task import VideoTask, Trim, Audio, Subtitle, Thumbnail, FinalVideo
 
 class ParseJsonStep(BaseStep):
     @property
@@ -59,7 +59,8 @@ class InputParser:
                         audio=Audio(audio_stream_index=0, check_exist=False),
                         trim=Trim(cut_front_seconds=0.0, cut_back_seconds=0.0, begin_chapter="", end_chapter=""),
                         subtitle=Subtitle(subtitle_lang="de", check_exist=False),
-                        thumbnail=Thumbnail(pic_path="", blur_sigma=0.0, check_exist=False)
+                        thumbnail=Thumbnail(pic_path="", blur_sigma=0.0, check_exist=False),
+                        final_video=FinalVideo(check_exist=False)
                     )
                 )
         if not self.video_tasks:
@@ -133,6 +134,13 @@ class InputParser:
             check_exist = bool(thumbnail_data.get('check_exist', False))
             thumbnail = Thumbnail(pic_path, blur_sigma, check_exist=check_exist)
             
+            # 解析可选的final_video对象
+            final_video = FinalVideo(check_exist=False)
+            if 'final_video' in item:
+                fv_data = item['final_video']
+                check_exist = bool(fv_data.get('check_exist', False))
+                final_video = FinalVideo(check_exist=check_exist)
+            
             # 添加到任务列表
             self.video_tasks.append(
                 VideoTask(
@@ -140,7 +148,8 @@ class InputParser:
                     audio=audio,
                     trim=trim,
                     subtitle=subtitle,
-                    thumbnail=thumbnail
+                    thumbnail=thumbnail,
+                    final_video=final_video
                 )
             )
         print(f"✅ 解析JSON完成，找到 {len(self.video_tasks)} 个视频任务")
