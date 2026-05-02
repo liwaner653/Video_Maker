@@ -86,36 +86,6 @@ def embed_subtitle_to_video(
         '-shortest',
         output_video_path
     ])
-#    # 4. 构建 FFmpeg 命令
-#    command = [
-#        'ffmpeg', '-y',
-#        
-#        # --- 输入 1: 图片流 ---
-#        '-loop', '1',               # 循环播放这张图片
-#        '-framerate', '30',         # 设置视频帧率为30，保证画面流畅和字幕渲染正常
-#        '-i', thumbnail_path,
-#        
-#        # --- 输入 2: 音频流 ---
-#        '-i', audio_path,
-#        
-#        # --- 滤镜: 烧录字幕 ---
-#        '-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei'",
-#        
-#        # --- 视频编码设置 ---
-#        '-c:v', 'libx264',
-#        '-preset', 'medium',
-#        '-crf', '23',
-#        '-tune', 'stillimage',      # 【新增优化】专门针对静态图片的优化，能减小文件体积
-#        '-pix_fmt', 'yuv420p',      # 【新增优化】色彩空间格式。如果不加，某些浏览器和手机播放会黑屏
-#        
-#        # --- 音频编码设置 ---
-#        '-c:a', 'copy',             # 直接拷贝原音频流，无损且快速
-#        
-#        # --- 截断设置 ---
-#        '-shortest',                # 因为图片是无限循环的，所以以音频的长度为准结束合成
-#        
-#        output_video_path
-#    ]
     
     print(f"📽️ 开始合成：{base_name}.mp4")
     try:
