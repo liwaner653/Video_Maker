@@ -293,9 +293,7 @@ class AudioExtractor:
         self,
         video_path: str,
         output_dir: str,
-        audio_stream_index: int = 0,
-        start_time: float = 0.0,
-        duration: float = 0.0
+        audio_stream_index: int = 0
     ) -> Optional[str]:
         """
         智能提取音频，根据编码自动选择输出格式和处理方式
@@ -303,8 +301,6 @@ class AudioExtractor:
         :param video_path: 视频文件路径
         :param output_dir: 输出目录
         :param audio_stream_index: 音频轨道索引
-        :param start_time: 提取开始时间（秒）
-        :param duration: 提取时长（秒），0表示提取到末尾
         :return: 生成的音频文件路径，失败返回None
         """
         import os
@@ -340,12 +336,7 @@ class AudioExtractor:
         audio_path = os.path.join(output_dir, audio_name)
         
         # 构建ffmpeg命令
-        command = ["ffmpeg"]
-        
-        if start_time > 0:
-            command.extend(["-ss", str(start_time)])
-        
-        command.extend(["-i", video_path])
+        command = ["ffmpeg", "-i", video_path]
         command.extend(["-map", f"0:a:{audio_stream_index}"])
         command.extend(["-vn"])  # 不处理视频流
         
@@ -355,9 +346,6 @@ class AudioExtractor:
         else:
             # 不支持的编码，使用流复制
             command.extend(["-acodec", "copy"])
-        
-        if duration > 0:
-            command.extend(["-t", str(duration)])
         
         command.extend(["-y", audio_path])
         

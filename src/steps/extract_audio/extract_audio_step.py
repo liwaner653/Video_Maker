@@ -33,10 +33,6 @@ class AudioStep(BaseStep):
 
     def execute(self, context: TaskContext) -> bool:
         task = context.task
-        # 使用TaskContext中的修剪时间
-        start_time = context.trim_start_time
-        end_time = context.trim_end_time
-        duration = end_time - start_time if end_time > 0 else 0.0
 
         # 如果check_exist为True，检查输出目录中是否存在同名音频文件
         if task.audio and task.audio.check_exist:
@@ -57,13 +53,13 @@ class AudioStep(BaseStep):
             context.error_msg = "未找到匹配的音轨"
             return False
         
-        # 使用智能提取器提取音频
+        # 提取完整音频，不进行修剪
         audio_path = self.audio_extractor.extract_audio(
             task.video_path,
             context.audio_dir,
             audio_stream_index,
-            start_time,
-            duration
+            0.0,
+            0.0
         )
         
         if audio_path:
@@ -142,9 +138,7 @@ def find_audio_stream_by_language(video_path: str, language: str) -> int:
 def extract_audio_acc_language(
     video_path: str,
     output_dir: str,
-    language: str,
-    start_time: float = 0.0,
-    duration: float = 0.0
+    language: str
 ) -> Optional[str]:
     """
     根据给定的语言缩写，智能提取对应的音轨（保留向后兼容）
@@ -152,8 +146,6 @@ def extract_audio_acc_language(
     :param video_path: 视频文件路径
     :param output_dir: 输出目录
     :param language: 语言代码
-    :param start_time: 提取开始时间（秒）
-    :param duration: 提取时长（秒），0表示提取到末尾
     :return: 生成的音频文件路径，失败返回None
     """
     audio_stream_index = find_audio_stream_by_language(video_path, language)
@@ -162,15 +154,13 @@ def extract_audio_acc_language(
         return None
     
     extractor = AudioExtractor()
-    return extractor.extract_audio(video_path, output_dir, audio_stream_index, start_time, duration)
+    return extractor.extract_audio(video_path, output_dir, audio_stream_index)
 
 
 def extract_audio(
     video_path: str,
     output_dir: str,
-    audio_stream_index: int = 0,
-    start_time: float = 0.0,
-    duration: float = 0.0
+    audio_stream_index: int = 0
 ) -> Optional[str]:
     """
     智能提取指定音轨的音频，根据编码自动选择格式（保留向后兼容）
@@ -178,8 +168,6 @@ def extract_audio(
     :param video_path: 视频文件路径
     :param output_dir: 音频输出目录
     :param audio_stream_index: 音频轨道索引（默认0）
-    :param start_time: 提取开始时间（秒）
-    :param duration: 提取时长（秒），0表示提取到末尾
     :return: 生成的音频文件路径，失败返回None
     """
     if not os.path.exists(video_path):
@@ -187,4 +175,4 @@ def extract_audio(
         return None
     
     extractor = AudioExtractor()
-    return extractor.extract_audio(video_path, output_dir, audio_stream_index, start_time, duration)
+    return extractor.extract_audio(video_path, output_dir, audio_stream_index)
