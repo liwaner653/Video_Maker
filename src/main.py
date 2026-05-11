@@ -12,7 +12,7 @@ from steps.get_subtitle_index import GetSubtitleIndexStep
 from steps.input_parser import ParseJsonStep
 from steps.prepare_dir_step import PrepareDirStep
 from steps.subtitle.subtitle_step import SubtitleStep
-from steps.calc_trim_time import CalcTrimTimeStep
+from steps.calc_trim_segments import TrimSegmentsStep
 
 
 def main(json_path):
@@ -23,7 +23,7 @@ def main(json_path):
         sys.exit(1)
         
     video_pipeline = [PrepareDirStep(), 
-                      CalcTrimTimeStep(),
+                      TrimSegmentsStep(),
                       ThumbnailStep(), 
                       AudioStep(), 
                       GetSubtitleIndexStep(),
