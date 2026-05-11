@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 # ===================== 1. 数据结构 (Context) =====================
 @dataclass
@@ -9,6 +9,8 @@ class TrimSegment:
     thumbnail: bool
     srt: bool
     video: bool
+    srt_path: str = ""  # 该片段的字幕文件路径
+
 
 @dataclass
 class TaskContext:
@@ -30,9 +32,13 @@ class TaskContext:
     srt_stream_index: int = -1  # SRT字幕轨道索引，-1表示未设置
 
     trim_segments: List[TrimSegment] = field(default_factory=list)
+    
+    # 存储所有生成的字幕路径，用于后续处理
+    srt_paths: List[str] = field(default_factory=list)
 
     status: bool = True
     error_msg: str = ""
+
 
 @dataclass
 class BatchContext:
