@@ -2,15 +2,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 
-# Trim class kept for backward compatibility only - deprecated, use VideoPart instead
-@dataclass
-class Trim:
-    """视频裁剪配置（已废弃，用于向后兼容）"""
-    cut_front_seconds: float = 0.0
-    cut_back_seconds: float = 0.0
-    begin_chapter: str = ""
-    end_chapter: str = ""
-
+# Audio class kept for
 @dataclass
 class Audio:
     """音频相关配置"""
@@ -54,7 +46,6 @@ class VideoTask:
     """视频任务数据类，保存单个视频的解析结果（支持扩展新字段）"""
     video_path: str          # 视频文件完整路径
     audio: Optional[Audio] = None  # 音频配置，可选
-    trim: Optional[Trim] = None  # 裁剪配置（向后兼容，可选）
     subtitle: Optional[Subtitle] = None  # 字幕配置，可选
     thumbnail: Thumbnail = field(default_factory=Thumbnail)  # 缩略图配置
     final_video: FinalVideo = field(default_factory=FinalVideo)  # 最终视频配置
