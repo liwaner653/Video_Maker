@@ -5,7 +5,7 @@ from typing import List
 import argparse
 from steps.base_step import BaseStep
 from steps.context import BatchContext, TaskContext
-from steps.video_task import VideoTask, Trim, Audio, Subtitle, Thumbnail, FinalVideo
+from steps.video_task import VideoTask, VideoPart, Audio, Subtitle, Thumbnail, FinalVideo
 
 class ParseJsonStep(BaseStep):
     @property
@@ -57,7 +57,7 @@ class InputParser:
                     VideoTask(
                         video_path=video_path,
                         audio=Audio(audio_stream_index=0, check_exist=False),
-                        trim=Trim(cut_front_seconds=0.0, cut_back_seconds=0.0, begin_chapter="", end_chapter=""),
+                        parts=[VideoPart()],
                         subtitle=Subtitle(subtitle_lang="de", check_exist=False),
                         thumbnail=Thumbnail(pic_path="", blur_sigma=0.0, check_exist=False),
                         final_video=FinalVideo(check_exist=False)
@@ -99,17 +99,18 @@ class InputParser:
                 check_exist = bool(audio_data.get('check_exist', False))
                 audio = Audio(audio_stream_index=audio_stream_index, check_exist=check_exist)
             
-            # 解析可选的trim对象
-            trim = None
-            if 'trim' in item:
-                trim_data = item['trim']
-                cut_front = float(trim_data.get('cut_front_seconds', 0.0))
-                cut_back = float(trim_data.get('cut_back_seconds', 0.0))
-                if cut_front < 0 or cut_back < 0:
-                    raise ValueError(f"JSON第{idx+1}项trim对象裁剪秒数不能为负")
-                begin_chapter = trim_data.get('begin_chapter', "").strip()
-                end_chapter = trim_data.get('end_chapter', "").strip()
-                trim = Trim(cut_front, cut_back, begin_chapter, end_chapter)
+            # 解析可选的video_parts数组
+            parts = []
+            if 'video_parts' in item:
+                video_parts_data = item['video_parts']
+                if not isinstance(video_parts_data, list):
+                    raise ValueError(f"JSON第{idx+1}项video_parts必须是数组")
+                for part_idx, part_data in enumerate(video_parts_data):
+                    parts.append(self._parse_video_part(part_data, idx+1, part_idx+1))
+            elif 'video_part' in item:
+                parts.append(self._parse_video_part(item['video_part'], idx+1, 1))
+            else:
+                parts = [VideoPart()]
             
             # 解析可选的subtitle对象
             subtitle = None
@@ -146,13 +147,54 @@ class InputParser:
                 VideoTask(
                     video_path=video_path,
                     audio=audio,
-                    trim=trim,
                     subtitle=subtitle,
                     thumbnail=thumbnail,
-                    final_video=final_video
+                    final_video=final_video,
+                    parts=parts
                 )
             )
         print(f"✅ 解析JSON完成，找到 {len(self.video_tasks)} 个视频任务")
-
-
     
+    def _parse_video_part(self, part_data: dict, item_idx: int, part_idx: int) -> VideoPart:
+        """解析单个VideoPart对象"""
+        name = part_data.get('name', "").strip()
+        
+        cut_front_seconds = part_data.get('cut_front_seconds')
+        if cut_front_seconds is not None:
+            cut_front_seconds = float(cut_front_seconds)
+            if cut_front_seconds < 0:
+                raise ValueError(f"JSON第{item_idx}项第{part_idx}个video_part的cut_front_seconds不能为负")
+        
+        cut_back_seconds = part_data.get('cut_back_seconds')
+        if cut_back_seconds is not None:
+            cut_back_seconds = float(cut_back_seconds)
+            if cut_back_seconds < 0:
+                raise ValueError(f"JSON第{item_idx}项第{part_idx}个video_part的cut_back_seconds不能为负")
+        
+        start_chapter_name = part_data.get('start_chapter_name', "").strip()
+        
+        last_seconds = part_data.get('last_seconds')
+        if last_seconds is not None:
+            last_seconds = float(last_seconds)
+            if last_seconds < 0:
+                raise ValueError(f"JSON第{item_idx}项第{part_idx}个video_part的last_seconds不能为负")
+        
+        end_chapter_name = part_data.get('end_chapter_name')
+        if end_chapter_name is not None:
+            end_chapter_name = end_chapter_name.strip()
+        
+        thumbnail = bool(part_data.get('thumbnail', True))
+        srt = bool(part_data.get('srt', True))
+        video = bool(part_data.get('video', True))
+        
+        return VideoPart(
+            name=name,
+            cut_front_seconds=cut_front_seconds,
+            cut_back_seconds=cut_back_seconds,
+            start_chapter_name=start_chapter_name,
+            last_seconds=last_seconds,
+            end_chapter_name=end_chapter_name,
+            thumbnail=thumbnail,
+            srt=srt,
+            video=video
+        )
