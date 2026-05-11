@@ -26,14 +26,39 @@ class ThumbnailStep(BaseStep):
                     context.thumb_path = existing_thumb
                     return True
             
+            # 获取所有标记为需要生成缩略图的片段
+            thumbnail_segments = [seg for seg in context.trim_segments if seg.thumbnail]
+            
+            if not thumbnail_segments:
+                # 如果没有标记为thumbnail=True的片段，使用完整视频生成缩略图
+                thumb_path = generate_thumbnail(
+                    video_path=task.video_path,
+                    output_dir=context.thumb_dir,
+                    thumbnail_size="320:180",
+                    quality=2,
+                    blur_sigma=task.thumbnail.blur_sigma,
+                    start_time=0.0,
+                    end_time=0.0
+                )
+                if thumb_path:
+                    context.thumb_path = thumb_path
+                    return True
+                context.error_msg = "缩略图生成失败"
+                return False
+            
+            # 计算合并后的时间范围：第一个thumbnail片段的开始时间到最后一个thumbnail片段的结束时间
+            merged_start_time = thumbnail_segments[0].start_time
+            merged_end_time = thumbnail_segments[-1].end_time
+            
+            # 在合并的时间范围内生成单个缩略图
             thumb_path = generate_thumbnail(
                 video_path=task.video_path,
                 output_dir=context.thumb_dir,
                 thumbnail_size="320:180",
                 quality=2,
                 blur_sigma=task.thumbnail.blur_sigma,
-                trim_start_time=context.trim_start_time,
-                trim_end_time=context.trim_end_time
+                start_time=merged_start_time,
+                end_time=merged_end_time
             )
             if thumb_path:
                 context.thumb_path = thumb_path
