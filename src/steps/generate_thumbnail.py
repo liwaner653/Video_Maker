@@ -164,6 +164,8 @@ def generate_thumbnail(
             print(f"❌ 错误：修剪范围无效 -> 开始: {effective_start:.2f}s, 结束: {effective_end:.2f}s")
             return None
         
+        print(f"📐 缩略图生成范围：开始={effective_start:.2f}s, 结束={effective_end:.2f}s, 时长={effective_duration:.2f}s")
+        
         # 5. 构建FFmpeg命令
         ffmpeg_cmd = ["ffmpeg", "-y", "-i", video_path, "-loglevel", "error"]
         
