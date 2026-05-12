@@ -74,8 +74,6 @@ class GenerateSubtitlesStep(BaseStep):
         if generated_srt_paths:
             # 设置第一个生成的字幕路径到context
             context.srt_path = generated_srt_paths[0]
-            # 存储所有生成的字幕路径
-            context.srt_paths = generated_srt_paths
             print(f"✅ 共生成 {len(generated_srt_paths)} 个字幕文件")
             for idx, path in enumerate(generated_srt_paths):
                 print(f"   - 片段 {idx}: {path}")
