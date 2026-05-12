@@ -34,7 +34,7 @@ class VideoPart:
     end_chapter_name: Optional[str] = None  # 可选：结束于指定章节名称
     thumbnail: bool = True  # 默认true：是否生成缩略图
     srt: bool = True  # 默认true：是否生成字幕
-    video: bool = True  # 默认true：是否生成分段视频
+    audio: bool = True  # 默认true：是否保留该片段的音频
 
 @dataclass
 class FinalVideo:

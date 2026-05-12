@@ -78,21 +78,21 @@ def calculate_time_based_segments(
             end_time=cut_front,
             thumbnail=False,
             srt=False,
-            video=False
+            audio=False
         ))
         segments.append(TrimSegment(
             start_time=cut_front,
             end_time=video_duration - cut_back,
             thumbnail=part.thumbnail,
             srt=part.srt,
-            video=part.video
+            audio=part.audio
         ))
         segments.append(TrimSegment(
             start_time=video_duration - cut_back,
             end_time=video_duration,
             thumbnail=False,
             srt=False,
-            video=False
+            audio=False
         ))
     elif has_front:
         segments.append(TrimSegment(
@@ -100,14 +100,14 @@ def calculate_time_based_segments(
             end_time=cut_front,
             thumbnail=False,
             srt=False,
-            video=False
+            audio=False
         ))
         segments.append(TrimSegment(
             start_time=cut_front,
             end_time=video_duration,
             thumbnail=part.thumbnail,
             srt=part.srt,
-            video=part.video
+            audio=part.audio
         ))
     elif has_back:
         segments.append(TrimSegment(
@@ -115,14 +115,14 @@ def calculate_time_based_segments(
             end_time=video_duration - cut_back,
             thumbnail=part.thumbnail,
             srt=part.srt,
-            video=part.video
+            audio=part.audio
         ))
         segments.append(TrimSegment(
             start_time=video_duration - cut_back,
             end_time=video_duration,
             thumbnail=False,
             srt=False,
-            video=False
+            audio=False
         ))
     else:
         segments.append(TrimSegment(
@@ -130,7 +130,7 @@ def calculate_time_based_segments(
             end_time=video_duration,
             thumbnail=part.thumbnail,
             srt=part.srt,
-            video=part.video
+            audio=part.audio
         ))
 
     return segments
@@ -161,7 +161,7 @@ def calculate_chapter_based_segments(
             end_time=start_time,
             thumbnail=False,
             srt=False,
-            video=False
+            audio=False
         ))
 
     end_time = video_duration
@@ -180,7 +180,7 @@ def calculate_chapter_based_segments(
             end_time=end_time,
             thumbnail=part.thumbnail,
             srt=part.srt,
-            video=part.video
+            audio=part.audio
         ))
 
     return segments

@@ -7,12 +7,14 @@ from steps.post_processing_step import PostProcessingStep
 from steps.context import BatchContext
 from steps.video_compose_step import VideoComposeStep
 from steps.extract_audio.extract_audio_step import AudioStep
+from steps.extract_audio.audio_trim_step import AudioTrimStep
 from steps.generate_thumbnail import ThumbnailStep
 from steps.extract_subtitles import ExtractSubtitlesStep
 from steps.input_parser import ParseJsonStep
 from steps.prepare_dir_step import PrepareDirStep
 from steps.subtitle.generate_subtitles_step import GenerateSubtitlesStep
 from steps.calc_trim_segments import TrimSegmentsStep
+from steps.srt_combination_step import SrtCombinationStep
 
 
 def main(json_path):
@@ -28,6 +30,8 @@ def main(json_path):
                       AudioStep(), 
                       ExtractSubtitlesStep(),
                       GenerateSubtitlesStep(), 
+                      SrtCombinationStep(),
+                      AudioTrimStep(),
                       VideoComposeStep()]
     total = len(batch_ctx.task_contexts)
     

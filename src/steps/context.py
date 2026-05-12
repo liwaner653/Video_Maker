@@ -8,7 +8,7 @@ class TrimSegment:
     end_time: float
     thumbnail: bool
     srt: bool
-    video: bool
+    audio: bool
     srt_path: str = ""  # 该片段的字幕文件路径
 
 
@@ -33,9 +33,6 @@ class TaskContext:
 
     trim_segments: List[TrimSegment] = field(default_factory=list)
     
-    # 存储所有生成的字幕路径，用于后续处理
-    srt_paths: List[str] = field(default_factory=list)
-
     status: bool = True
     error_msg: str = ""
 
