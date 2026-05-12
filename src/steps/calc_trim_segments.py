@@ -175,7 +175,7 @@ def calculate_chapter_based_segments(
     if part.last_seconds is not None and part.last_seconds > 0:
         end_time = start_time + part.last_seconds
     elif part.end_chapter_name and part.end_chapter_name in chapters:
-        end_time = chapters[part.end_chapter_name]["start_time"]
+        end_time = chapters[part.end_chapter_name]["end_time"]
     elif next_part_start is not None:
         end_time = next_part_start
 
@@ -239,6 +239,10 @@ def calculate_trim_segments(context: TaskContext) -> bool:
 
     total_duration = sum(s.end_time - s.start_time for s in context.trim_segments)
     print(f"✅ 生成了 {len(context.trim_segments)} 个分段，总时长 {total_duration:.2f}s")
+    
+    for i, seg in enumerate(context.trim_segments, 1):
+        duration = seg.end_time - seg.start_time
+        print(f"   分段 {i}: [{seg.start_time:.2f}s -> {seg.end_time:.2f}s] 时长={duration:.2f}s thumbnail={seg.thumbnail} srt={seg.srt} audio={seg.audio}")
 
     return True
 
