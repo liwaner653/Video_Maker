@@ -11,7 +11,7 @@ from steps.generate_thumbnail import ThumbnailStep
 from steps.extract_subtitles import ExtractSubtitlesStep
 from steps.input_parser import ParseJsonStep
 from steps.prepare_dir_step import PrepareDirStep
-from steps.subtitle.subtitle_step import SubtitleStep
+from steps.subtitle.generate_subtitles_step import GenerateSubtitlesStep
 from steps.calc_trim_segments import TrimSegmentsStep
 
 
@@ -27,7 +27,7 @@ def main(json_path):
                       ThumbnailStep(), 
                       AudioStep(), 
                       ExtractSubtitlesStep(),
-                      SubtitleStep(), 
+                      GenerateSubtitlesStep(), 
                       VideoComposeStep()]
     total = len(batch_ctx.task_contexts)
     

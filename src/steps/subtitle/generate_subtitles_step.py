@@ -7,7 +7,7 @@ from steps.base_step import BaseStep
 from steps.context import TaskContext
 
 
-class SubtitleStep(BaseStep):
+class GenerateSubtitlesStep(BaseStep):
     @property
     def step_name(self):
         return "字幕生成"
