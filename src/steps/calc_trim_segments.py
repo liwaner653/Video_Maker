@@ -79,15 +79,6 @@ def calculate_time_based_segments(
         main_end_time = cut_front + last_seconds
         main_end_time = min(main_end_time, video_duration)
         
-        if has_front and 0.0 < cut_front:
-            segments.append(TrimSegment(
-                start_time=0.0,
-                end_time=cut_front,
-                thumbnail=False,
-                srt=False,
-                audio=False
-            ))
-        
         if cut_front < main_end_time:
             segments.append(TrimSegment(
                 start_time=cut_front,
@@ -107,14 +98,6 @@ def calculate_time_based_segments(
             ))
     elif has_front and has_back:
         main_end = video_duration - cut_back
-        if 0.0 < cut_front:
-            segments.append(TrimSegment(
-                start_time=0.0,
-                end_time=cut_front,
-                thumbnail=False,
-                srt=False,
-                audio=False
-            ))
         if cut_front < main_end:
             segments.append(TrimSegment(
                 start_time=cut_front,
@@ -132,14 +115,6 @@ def calculate_time_based_segments(
                 audio=False
             ))
     elif has_front:
-        if 0.0 < cut_front:
-            segments.append(TrimSegment(
-                start_time=0.0,
-                end_time=cut_front,
-                thumbnail=False,
-                srt=False,
-                audio=False
-            ))
         if cut_front < video_duration:
             segments.append(TrimSegment(
                 start_time=cut_front,
@@ -185,9 +160,8 @@ def calculate_chapter_based_segments(
     chapters: dict
 ) -> list:
     """
-    根据 start_chapter_name 生成带前导片段的分段
-    - 如果 start_chapter_name 章节的 start_time > 0，创建前导片段 [0, start_time)
-    - 主片段 [start_time, end_time) 包含 thumbnail/srt/video 标志
+    根据 start_chapter_name 生成分段
+    - 主片段 [start_time, end_time) 是第一个分段，包含 thumbnail/srt/video 标志
     """
     segments = []
 
@@ -196,15 +170,6 @@ def calculate_chapter_based_segments(
         return segments
 
     start_time = chapters[part.start_chapter_name]["start_time"]
-
-    if 0.0 < start_time:
-        segments.append(TrimSegment(
-            start_time=0.0,
-            end_time=start_time,
-            thumbnail=False,
-            srt=False,
-            audio=False
-        ))
 
     end_time = video_duration
     if part.last_seconds is not None and part.last_seconds > 0:
