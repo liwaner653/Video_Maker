@@ -114,7 +114,11 @@ class AudioTrimStep(BaseStep):
             list_file = os.path.join(temp_dir, "segments.txt")
             with open(list_file, 'w', encoding='utf-8') as f:
                 for sf in segment_files:
-                    f.write(f"file '{sf.replace('\\', '/')}'\n")
+                    # 先处理路径，把反斜杠换成斜杠
+                    safe_path = sf.replace('\\', '/')
+
+                    # 再写入，直接使用处理好的变量
+                    f.write(f"file '{safe_path}'\n")
             
             cmd = [
                 'ffmpeg', '-y',
