@@ -57,9 +57,7 @@ class AudioStep(BaseStep):
         audio_path = self.audio_extractor.extract_audio(
             task.video_path,
             context.audio_dir,
-            audio_stream_index,
-            0.0,
-            0.0
+            audio_stream_index
         )
         
         if audio_path:

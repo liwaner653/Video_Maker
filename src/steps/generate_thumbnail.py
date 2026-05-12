@@ -57,8 +57,8 @@ class ThumbnailStep(BaseStep):
                 thumbnail_size="320:180",
                 quality=2,
                 blur_sigma=task.thumbnail.blur_sigma,
-                start_time=merged_start_time,
-                end_time=merged_end_time
+                trim_start_time=merged_start_time,
+                trim_end_time=merged_end_time
             )
             if thumb_path:
                 context.thumb_path = thumb_path

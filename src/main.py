@@ -15,6 +15,7 @@ from steps.prepare_dir_step import PrepareDirStep
 from steps.subtitle.generate_subtitles_step import GenerateSubtitlesStep
 from steps.calc_trim_segments import TrimSegmentsStep
 from steps.srt_combination_step import SrtCombinationStep
+from steps import config
 
 
 def main(json_path):
@@ -30,7 +31,7 @@ def main(json_path):
                       AudioStep(), 
                       ExtractSubtitlesStep(),
                       GenerateSubtitlesStep(), 
-                      SrtCombinationStep(),
+                      SrtCombinationStep(debug=config.DEBUG),
                       AudioTrimStep(),
                       VideoComposeStep()]
     total = len(batch_ctx.task_contexts)
@@ -49,7 +50,8 @@ def main(json_path):
     print("\n" + "="*70 + f"\n📊 统计：成功 {success}/{total} \n" + "="*70)
 
     # 阶段3：后处理（清理临时文件和上传subtitles）
-    PostProcessingStep().run(batch_ctx)
+    if not config.DEBUG:
+        PostProcessingStep().run(batch_ctx)
 
 if __name__ == "__main__":
-    main(r"C:\Users\12864\Desktop\kimi\json.json")
+    main(r"D:\sysu\10_myself\8_projects\Video_Maker\test\24_min_with_srt\json.json")

@@ -235,6 +235,13 @@ class SrtCombinationStep(BaseStep):
     处理完成后将结果字幕路径存入context.srt_path
     """
     
+    def __init__(self, debug: bool = False):
+        """
+        Args:
+            debug: 是否开启调试模式（跳过文件大小检查）
+        """
+        self.debug = debug
+    
     @property
     def step_name(self) -> str:
         return "字幕合并与时间轴调整"
@@ -301,10 +308,13 @@ class SrtCombinationStep(BaseStep):
             file_size = os.path.getsize(output_srt_path)
             print(f"📊 字幕文件大小: {file_size / 1024:.2f} KB")
             
-            # 检查字幕文件大小是否达标
-            if file_size >= MIN_SRT_FILE_SIZE_BYTES:
+            # 检查字幕文件大小是否达标（调试模式跳过检查）
+            if self.debug or file_size >= MIN_SRT_FILE_SIZE_BYTES:
                 context.srt_path = output_srt_path
-                print(f"✅ 字幕处理完成: {context.srt_path}")
+                if self.debug:
+                    print(f"✅ 调试模式：跳过文件大小检查，字幕处理完成: {context.srt_path}")
+                else:
+                    print(f"✅ 字幕处理完成: {context.srt_path}")
             else:
                 context.srt_path = ""
                 print(f"⚠️ 字幕文件小于 {MIN_SRT_FILE_SIZE_KB}KB，将跳过字幕合成")

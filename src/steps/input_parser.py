@@ -185,8 +185,8 @@ class InputParser:
         
         thumbnail = bool(part_data.get('thumbnail', True))
         srt = bool(part_data.get('srt', True))
-        video = bool(part_data.get('video', True))
-        
+        audio = bool(part_data.get('audio', True))
+
         return VideoPart(
             name=name,
             cut_front_seconds=cut_front_seconds,
@@ -196,5 +196,5 @@ class InputParser:
             end_chapter_name=end_chapter_name,
             thumbnail=thumbnail,
             srt=srt,
-            video=video
+            audio=audio
         )

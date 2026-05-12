@@ -54,7 +54,7 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
             }
             
             if part_data:
-                task_data["parts"] = [part_data]
+                task_data["video_parts"] = [part_data]
             
             json_data.append(task_data)
     
@@ -71,5 +71,7 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
 if __name__ == "__main__":
     input_dir = input("请输入视频文件所在目录路径: ").strip()
     generate_video_json(input_dir, os.path.join(input_dir, "json.json"), 
-                        default_sub_lang='en'
+                        default_sub_lang='en',
+                        start_chapter_name='Opening',
+                        end_chapter_name='Ending'
                         )
