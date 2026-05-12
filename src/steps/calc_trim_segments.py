@@ -60,70 +60,112 @@ def calculate_time_based_segments(
     video_duration: float
 ) -> list:
     """
-    根据 cut_front_seconds/cut_back_seconds 生成多个分段
+    根据 cut_front_seconds/cut_back_seconds/last_seconds 生成多个分段
     - Only cut_front_seconds: [0, cut_front) + [cut_front, duration)
     - Only cut_back_seconds: [0, duration-cut_back) + [duration-cut_back, duration)
-    - Both: [0, cut_front) + [cut_front, duration-cut_back) + [duration-cut_back, duration)
+    - Both cut_front and cut_back: [0, cut_front) + [cut_front, duration-cut_back) + [duration-cut_back, duration)
+    - cut_front + last_seconds: [0, cut_front) + [cut_front, cut_front+last_seconds) + [cut_front+last_seconds, duration)
     """
     segments = []
     cut_front = part.cut_front_seconds if part.cut_front_seconds is not None else 0.0
     cut_back = part.cut_back_seconds if part.cut_back_seconds is not None else 0.0
+    last_seconds = part.last_seconds
 
     has_front = cut_front > 0
     has_back = cut_back > 0
+    has_last = last_seconds is not None and last_seconds > 0
 
-    if has_front and has_back:
-        segments.append(TrimSegment(
-            start_time=0.0,
-            end_time=cut_front,
-            thumbnail=False,
-            srt=False,
-            audio=False
-        ))
-        segments.append(TrimSegment(
-            start_time=cut_front,
-            end_time=video_duration - cut_back,
-            thumbnail=part.thumbnail,
-            srt=part.srt,
-            audio=part.audio
-        ))
-        segments.append(TrimSegment(
-            start_time=video_duration - cut_back,
-            end_time=video_duration,
-            thumbnail=False,
-            srt=False,
-            audio=False
-        ))
+    if has_last:
+        main_end_time = cut_front + last_seconds
+        main_end_time = min(main_end_time, video_duration)
+        
+        if has_front and 0.0 < cut_front:
+            segments.append(TrimSegment(
+                start_time=0.0,
+                end_time=cut_front,
+                thumbnail=False,
+                srt=False,
+                audio=False
+            ))
+        
+        if cut_front < main_end_time:
+            segments.append(TrimSegment(
+                start_time=cut_front,
+                end_time=main_end_time,
+                thumbnail=part.thumbnail,
+                srt=part.srt,
+                audio=part.audio
+            ))
+        
+        if main_end_time < video_duration:
+            segments.append(TrimSegment(
+                start_time=main_end_time,
+                end_time=video_duration,
+                thumbnail=False,
+                srt=False,
+                audio=False
+            ))
+    elif has_front and has_back:
+        main_end = video_duration - cut_back
+        if 0.0 < cut_front:
+            segments.append(TrimSegment(
+                start_time=0.0,
+                end_time=cut_front,
+                thumbnail=False,
+                srt=False,
+                audio=False
+            ))
+        if cut_front < main_end:
+            segments.append(TrimSegment(
+                start_time=cut_front,
+                end_time=main_end,
+                thumbnail=part.thumbnail,
+                srt=part.srt,
+                audio=part.audio
+            ))
+        if main_end < video_duration:
+            segments.append(TrimSegment(
+                start_time=main_end,
+                end_time=video_duration,
+                thumbnail=False,
+                srt=False,
+                audio=False
+            ))
     elif has_front:
-        segments.append(TrimSegment(
-            start_time=0.0,
-            end_time=cut_front,
-            thumbnail=False,
-            srt=False,
-            audio=False
-        ))
-        segments.append(TrimSegment(
-            start_time=cut_front,
-            end_time=video_duration,
-            thumbnail=part.thumbnail,
-            srt=part.srt,
-            audio=part.audio
-        ))
+        if 0.0 < cut_front:
+            segments.append(TrimSegment(
+                start_time=0.0,
+                end_time=cut_front,
+                thumbnail=False,
+                srt=False,
+                audio=False
+            ))
+        if cut_front < video_duration:
+            segments.append(TrimSegment(
+                start_time=cut_front,
+                end_time=video_duration,
+                thumbnail=part.thumbnail,
+                srt=part.srt,
+                audio=part.audio
+            ))
     elif has_back:
-        segments.append(TrimSegment(
-            start_time=0.0,
-            end_time=video_duration - cut_back,
-            thumbnail=part.thumbnail,
-            srt=part.srt,
-            audio=part.audio
-        ))
-        segments.append(TrimSegment(
-            start_time=video_duration - cut_back,
-            end_time=video_duration,
-            thumbnail=False,
-            srt=False,
-            audio=False
-        ))
+        main_end = video_duration - cut_back
+        if 0.0 < main_end:
+            segments.append(TrimSegment(
+                start_time=0.0,
+                end_time=main_end,
+                thumbnail=part.thumbnail,
+                srt=part.srt,
+                audio=part.audio
+            ))
+        if main_end < video_duration:
+            segments.append(TrimSegment(
+                start_time=main_end,
+                end_time=video_duration,
+                thumbnail=False,
+                srt=False,
+                audio=False
+            ))
     else:
         segments.append(TrimSegment(
             start_time=0.0,
@@ -155,7 +197,7 @@ def calculate_chapter_based_segments(
 
     start_time = chapters[part.start_chapter_name]["start_time"]
 
-    if start_time > 0:
+    if 0.0 < start_time:
         segments.append(TrimSegment(
             start_time=0.0,
             end_time=start_time,
@@ -174,7 +216,7 @@ def calculate_chapter_based_segments(
 
     end_time = min(end_time, video_duration)
 
-    if end_time > start_time:
+    if start_time < end_time:
         segments.append(TrimSegment(
             start_time=start_time,
             end_time=end_time,
