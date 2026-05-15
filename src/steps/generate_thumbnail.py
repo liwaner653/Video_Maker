@@ -7,6 +7,7 @@ from typing import Optional
 
 from steps.base_step import BaseStep
 from steps.context import TaskContext
+from steps.util import get_video_duration
 
 class ThumbnailStep(BaseStep):
     @property
@@ -142,15 +143,8 @@ def generate_thumbnail(
     
     try:
         # 4. 获取视频时长（用于计算采样间隔）
-        duration_cmd = [
-            "ffprobe", "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            video_path
-        ]
-        duration_output = subprocess.check_output(duration_cmd, text=True, stderr=subprocess.STDOUT)
-        video_duration = float(duration_output.strip())
-        
+        video_duration = get_video_duration(video_path)
+
         if video_duration <= 0:
             print(f"❌ 错误：视频时长异常 -> {video_path}")
             return None
