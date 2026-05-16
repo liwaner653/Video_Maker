@@ -196,7 +196,7 @@ def calculate_chapter_based_segments(
 def calculate_trim_segments(context: TaskContext) -> bool:
     """
     计算所有分段的trim时间
-    遍历 task.parts，根据每 part 的配置选择 Mode A 或 Mode B
+    遍历 task.parts，维护一个TrimSegment上下文，逐个处理VideoPart
     """
     task = context.task
     video_path = task.video_path
@@ -214,28 +214,86 @@ def calculate_trim_segments(context: TaskContext) -> bool:
             end_time=video_duration,
             thumbnail=True,
             srt=True,
-            video=True
+            audio=True
         ))
         return True
 
     is_mkv = video_path.lower().endswith('.mkv')
     chapters = get_mkv_chapters(video_path) if is_mkv else {}
 
+    current_segment = None
+
     for i, part in enumerate(task.parts):
-        next_part_start = None
-        if i + 1 < len(task.parts):
-            next_part = task.parts[i + 1]
-            if next_part.start_chapter_name and next_part.start_chapter_name in chapters:
-                next_part_start = chapters[next_part.start_chapter_name]["start_time"]
-            elif next_part.cut_front_seconds is not None:
-                next_part_start = next_part.cut_front_seconds
+        if current_segment is None:
+            current_segment = {
+                'start_time': 0.0,
+                'thumbnail': part.thumbnail,
+                'srt': part.srt,
+                'audio': part.audio
+            }
 
-        if part.start_chapter_name:
-            segments = calculate_chapter_based_segments(part, video_duration, next_part_start, chapters)
+        if part.cut_front_seconds is not None:
+            current_segment['start_time'] = part.cut_front_seconds
+        elif part.start_chapter_name and part.start_chapter_name in chapters:
+            current_segment['start_time'] = chapters[part.start_chapter_name]["start_time"]
+
+        has_end_marker = False
+        end_time = video_duration
+
+        if part.last_seconds is not None and part.last_seconds > 0:
+            end_time = current_segment['start_time'] + part.last_seconds
+            has_end_marker = True
+        elif part.end_chapter_name and part.end_chapter_name in chapters:
+            end_time = chapters[part.end_chapter_name]["end_time"]
+            has_end_marker = True
+
+        end_time = min(end_time, video_duration)
+
+        if has_end_marker:
+            if current_segment['start_time'] < end_time:
+                context.trim_segments.append(TrimSegment(
+                    start_time=current_segment['start_time'],
+                    end_time=end_time,
+                    thumbnail=current_segment['thumbnail'],
+                    srt=current_segment['srt'],
+                    audio=current_segment['audio']
+                ))
+            current_segment = None
         else:
-            segments = calculate_time_based_segments(part, video_duration)
+            if i + 1 < len(task.parts):
+                next_part = task.parts[i + 1]
+                if next_part.start_chapter_name and next_part.start_chapter_name in chapters:
+                    end_time = chapters[next_part.start_chapter_name]["start_time"]
+                elif next_part.cut_front_seconds is not None:
+                    end_time = next_part.cut_front_seconds
 
-        context.trim_segments.extend(segments)
+                end_time = min(end_time, video_duration)
+
+                if current_segment['start_time'] < end_time:
+                    context.trim_segments.append(TrimSegment(
+                        start_time=current_segment['start_time'],
+                        end_time=end_time,
+                        thumbnail=current_segment['thumbnail'],
+                        srt=current_segment['srt'],
+                        audio=current_segment['audio']
+                    ))
+
+                current_segment = {
+                    'start_time': end_time,
+                    'thumbnail': next_part.thumbnail,
+                    'srt': next_part.srt,
+                    'audio': next_part.audio
+                }
+            else:
+                if current_segment['start_time'] < video_duration:
+                    context.trim_segments.append(TrimSegment(
+                        start_time=current_segment['start_time'],
+                        end_time=video_duration,
+                        thumbnail=current_segment['thumbnail'],
+                        srt=current_segment['srt'],
+                        audio=current_segment['audio']
+                    ))
+                current_segment = None
 
     total_duration = sum(s.end_time - s.start_time for s in context.trim_segments)
     print(f"✅ 生成了 {len(context.trim_segments)} 个分段，总时长 {total_duration:.2f}s")
