@@ -149,7 +149,7 @@ def adjust_extracted_srt(srt_path: str, segments: List[TrimSegment], output_path
                 block_start = block['start']
                 block_end = block['end']
                 
-                if block_start >= seg_start_td and block_end <= seg_end_td:
+                if block_start >= seg_start_td or block_end <= seg_end_td:
                     adjusted_start = block_start - offset
                     adjusted_end = block_end - offset
                     
