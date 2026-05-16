@@ -137,10 +137,10 @@ def adjust_extracted_srt(srt_path: str, segments: List[TrimSegment], output_path
         segment_end = seg.end_time
         segment_duration = timedelta(seconds=segment_end - segment_start)
         
-        # 如果 segment.video=false，offset 加上这个 segment 的 duration
-        if not seg.video:
+        # 如果 segment.audio=false，offset 加上这个 segment 的 duration
+        if not seg.audio:
             offset += segment_duration
-        # 如果 segment.video=true，将落在该 segment 范围内的字幕块时间减去 offset
+        # 如果 segment.audio=true，将落在该 segment 范围内的字幕块时间减去 offset
         else:
             seg_start_td = timedelta(seconds=segment_start)
             seg_end_td = timedelta(seconds=segment_end)
