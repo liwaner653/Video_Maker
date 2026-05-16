@@ -124,48 +124,52 @@ def adjust_extracted_srt(srt_path: str, segments: List[TrimSegment], output_path
     if not blocks:
         return False
     
-    # 筛选出需要字幕的片段
-    srt_segments = [seg for seg in segments if seg.srt]
-    if not srt_segments:
-        return False
-    
     adjusted_blocks = []
+    global_offset = timedelta(seconds=0)  # 全局偏移量，在循环外累加
+    first_segment = True
     
-    for seg in srt_segments:
+    for seg in segments:
         segment_start = seg.start_time  # 片段在原视频中的开始时间
         segment_end = seg.end_time      # 片段在原视频中的结束时间
+        segment_duration = timedelta(seconds=segment_end - segment_start)
         
-        seg_start_td = timedelta(seconds=segment_start)
-        seg_end_td = timedelta(seconds=segment_end)
+        # 第一段的 offset 为 start_time
+        if first_segment:
+            global_offset = timedelta(seconds=segment_start)
+            first_segment = False
         
-        # 计算累积偏移量（前面无字幕片段的总时长）
-        accumulated_offset = timedelta(seconds=0)
-        for prev_seg in segments[:segments.index(seg)]:
-            if not prev_seg.srt:
-                accumulated_offset += timedelta(seconds=prev_seg.end_time - prev_seg.start_time)
-        
-        # 遍历所有字幕块，筛选并调整时间
-        for block in blocks:
-            block_start = block['start']
-            block_end = block['end']
+        # 如果当前片段需要字幕
+        if seg.srt:
+            seg_start_td = timedelta(seconds=segment_start)
+            seg_end_td = timedelta(seconds=segment_end)
             
-            # 只处理完全落在当前片段范围内的字幕块
-            if block_start >= seg_start_td and block_end <= seg_end_td:
-                # 调整时间：减去片段开始时间和累积偏移量
-                adjusted_start = block_start - seg_start_td - accumulated_offset
-                adjusted_end = block_end - seg_start_td - accumulated_offset
+            # 遍历所有字幕块，筛选并调整时间
+            for block in blocks:
+                block_start = block['start']
+                block_end = block['end']
                 
-                # 确保结束时间大于0（有效字幕）
-                if adjusted_end.total_seconds() > 0:
-                    # 开始时间不能为负数
-                    if adjusted_start.total_seconds() < 0:
-                        adjusted_start = timedelta(seconds=0)
+                # 只处理完全落在当前片段范围内的字幕块
+                if block_start >= seg_start_td and block_end <= seg_end_td:
+                    # 调整时间：减去片段开始时间，加上全局偏移量
+                    adjusted_start = block_start - seg_start_td + global_offset
+                    adjusted_end = block_end - seg_start_td + global_offset
                     
-                    adjusted_blocks.append({
-                        'start': adjusted_start,
-                        'end': adjusted_end,
-                        'text': block['text']
-                    })
+                    # 确保结束时间大于0（有效字幕）
+                    if adjusted_end.total_seconds() > 0:
+                        # 开始时间不能为负数
+                        if adjusted_start.total_seconds() < 0:
+                            adjusted_start = timedelta(seconds=0)
+                        
+                        adjusted_blocks.append({
+                            'start': adjusted_start,
+                            'end': adjusted_end,
+                            'text': block['text']
+                        })
+            
+            # srt=true 时，offset 不变
+        else:
+            # 不需要字幕的片段：更新全局偏移量，加上当前片段的时长
+            global_offset += segment_duration
     
     if adjusted_blocks:
         write_srt_blocks(adjusted_blocks, output_path)
