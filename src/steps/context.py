@@ -11,6 +11,16 @@ class TrimSegment:
     audio: bool
     srt_path: str = ""  # 该片段的字幕文件路径
 
+    def to_json(self) -> dict:
+        return {
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "thumbnail": self.thumbnail,
+            "srt": self.srt,
+            "audio": self.audio,
+            "srt_path": self.srt_path
+        }
+
 
 @dataclass
 class TaskContext:

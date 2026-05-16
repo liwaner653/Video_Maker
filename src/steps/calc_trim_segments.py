@@ -302,6 +302,9 @@ def calculate_trim_segments(context: TaskContext) -> bool:
         duration = seg.end_time - seg.start_time
         print(f"   分段 {i}: [{seg.start_time:.2f}s -> {seg.end_time:.2f}s] 时长={duration:.2f}s thumbnail={seg.thumbnail} srt={seg.srt} audio={seg.audio}")
 
+    segments_json = json.dumps([seg.to_json() for seg in context.trim_segments], indent=2, ensure_ascii=False)
+    print(f"📋 分段 JSON:\n{segments_json}")
+
     return True
 
 
