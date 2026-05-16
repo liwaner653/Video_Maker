@@ -37,19 +37,19 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
                 "video_path": video_path,
                 "audio": {
                     "audio_stream_index": 0,
-                    "check_exist": False
+                    "check_exist": True
                 },
                 "subtitle": {
                     "subtitle_lang": default_sub_lang,
-                    "check_exist": False
+                    "check_exist": True
                 },
                 "thumbnail": {
                     "pic_path": default_pic_path,
                     "blur_sigma": default_blur_sigma,
-                    "check_exist": False
+                    "check_exist": True
                 },
                 "final_video": {
-                    "check_exist": False
+                    "check_exist": True
                 }
             }
             
@@ -71,7 +71,6 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
 if __name__ == "__main__":
     input_dir = input("请输入视频文件所在目录路径: ").strip()
     generate_video_json(input_dir, os.path.join(input_dir, "json.json"), 
-                        default_sub_lang='en',
-                        start_chapter_name='Opening',
-                        end_chapter_name='Ending'
+                        default_sub_lang='en'
+                        , default_blur_sigma=5.0
                         )
