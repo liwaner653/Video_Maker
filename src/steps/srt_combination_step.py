@@ -132,24 +132,28 @@ def adjust_extracted_srt(srt_path: str, segments: List[TrimSegment], output_path
     # offset 针对整个视频，初始值为第一个 segment 的 start_time
     offset = timedelta(seconds=segments[0].start_time)
     
+    block_index = 0
+    num_blocks = len(blocks)
+    
     for seg in segments:
         segment_start = seg.start_time
         segment_end = seg.end_time
         segment_duration = timedelta(seconds=segment_end - segment_start)
         
-        # 如果 segment.audio=false，offset 加上这个 segment 的 duration
         if not seg.audio:
             offset += segment_duration
-        # 如果 segment.audio=true，将落在该 segment 范围内的字幕块时间减去 offset
         else:
             seg_start_td = timedelta(seconds=segment_start)
             seg_end_td = timedelta(seconds=segment_end)
             
-            for block in blocks:
+            while block_index < num_blocks:
+                block = blocks[block_index]
                 block_start = block['start']
                 block_end = block['end']
                 
-                if block_start >= seg_start_td or block_end <= seg_end_td:
+                # 检查 block 是否与当前 segment 有交集
+                if (block_start >= seg_start_td and block_start <= seg_end_td) or \
+                   (block_end >= seg_start_td and block_end <= seg_end_td):
                     adjusted_start = block_start - offset
                     adjusted_end = block_end - offset
                     
@@ -162,6 +166,13 @@ def adjust_extracted_srt(srt_path: str, segments: List[TrimSegment], output_path
                             'end': adjusted_end,
                             'text': block['text']
                         })
+                    block_index += 1
+                elif block_end < seg_start_td:
+                    # block 在当前 segment 之前，跳过
+                    block_index += 1
+                else:
+                    # block 在当前 segment 之后，停止处理当前 segment
+                    break
     
     if adjusted_blocks:
         write_srt_blocks(adjusted_blocks, output_path)
