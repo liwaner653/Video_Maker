@@ -264,10 +264,7 @@ def run_trim_from_json(json_path: str) -> None:
 
 
 if __name__ == "__main__":
-    import argparse
+    json_path = r"D:\sysu\10_myself\8_projects\Video_Maker\src\trim_video\example_trim_config.json"
     
-    parser = argparse.ArgumentParser(description="视频剪辑工具 - 剪辑指定时间段并添加字幕")
-    parser.add_argument('json_path', help='JSON配置文件路径')
-    args = parser.parse_args()
-    
-    run_trim_from_json(args.json_path)
+    print(f"📂 使用配置文件: {json_path}")
+    run_trim_from_json(json_path)
