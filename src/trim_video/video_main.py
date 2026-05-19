@@ -1,14 +1,16 @@
 import os
+import sys
 import subprocess
 import json
 from datetime import timedelta
 from typing import Optional, List, Dict
 
-# 导入现有模块
-from ..steps.extract_subtitles import get_target_subtitle_indices, extract_mkv_subtitles
-from ..steps.extract_audio.extract_audio_step import find_audio_stream_by_language
-from ..steps.subtitle.subtitle_handler import SubtitleHandlerFactory
-from .trim_video_task import TrimVideoTask, TrimSegment, TrimAudioConfig, TrimSubtitleConfig
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from steps.extract_subtitles import get_target_subtitle_indices, extract_mkv_subtitles
+from steps.extract_audio.extract_audio_step import find_audio_stream_by_language
+from steps.subtitle.subtitle_handler import SubtitleHandlerFactory
+from trim_video.trim_video_task import TrimVideoTask, TrimSegment, TrimAudioConfig, TrimSubtitleConfig
 
 
 def get_audio_stream_indices(video_path: str, target_lang: str = "") -> list:
@@ -170,7 +172,6 @@ def process_trim_task(task: TrimVideoTask) -> Optional[str]:
             
             # 提取字幕
             if task.subtitle.subtitle_stream_index >= 0:
-                from ..steps.extract_subtitles import extract_mkv_subtitles
                 extracted_files = extract_mkv_subtitles(video_path, subtitle_dir, [task.subtitle.subtitle_stream_index])
                 if extracted_files:
                     srt_path = extracted_files[0]
