@@ -1,0 +1,30 @@
+{
+    "video_path": "D:/path/to/your/video.mkv",
+    "output_dir": "D:/path/to/output",
+    "segments": [
+        {
+            "start_time": 120.0,
+            "end_time": 180.0,
+            "name": "精彩片段1"
+        },
+        {
+            "start_time": 300.0,
+            "end_time": 420.0,
+            "name": "精彩片段2"
+        }
+    ],
+    "audio": {
+        "language": "en",
+        "audio_stream_index": -1,
+        "enabled": true
+    },
+    "subtitle": {
+        "language": "en",
+        "subtitle_stream_index": -1,
+        "burn_in": true,
+        "enabled": true
+    },
+    "output_format": "mp4",
+    "crf": 23,
+    "preset": "medium"
+}
