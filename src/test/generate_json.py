@@ -2,12 +2,13 @@ import json
 import os
 
 
-def generate_video_json(folder_path: str, output_json_path: str, cut_front_seconds=0.0, cut_back_seconds=0.0, start_chapter_name="", end_chapter_name="", default_sub_lang: str = "de", default_pic_path: str = "", default_blur_sigma: float = 0.0):
+def generate_video_json(folder_path: str, output_json_path: str, video_parts: list = None, cut_front_seconds=0.0, cut_back_seconds=0.0, start_chapter_name="", end_chapter_name="", default_sub_lang: str = "de", default_pic_path: str = "", default_blur_sigma: float = 0.0):
     """
     从视频文件夹生成JSON配置文件
     Args:
         folder_path: 视频文件夹路径
         output_json_path: 生成的JSON文件保存路径
+        video_parts: 自定义视频片段配置列表，若提供则优先使用，否则根据以下参数生成
         cut_front_seconds: 默认开头裁剪秒数
         cut_back_seconds: 默认结尾裁剪秒数
         start_chapter_name: 默认开始章节名称
@@ -23,15 +24,6 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
     for filename in os.listdir(folder_path):
         if filename.lower().endswith(video_extensions):
             video_path = os.path.abspath(os.path.join(folder_path, filename))
-            part_data = {}
-            if cut_front_seconds > 0:
-                part_data["cut_front_seconds"] = cut_front_seconds
-            if cut_back_seconds > 0:
-                part_data["cut_back_seconds"] = cut_back_seconds
-            if start_chapter_name:
-                part_data["start_chapter_name"] = start_chapter_name
-            if end_chapter_name:
-                part_data["end_chapter_name"] = end_chapter_name
             
             task_data = {
                 "video_path": video_path,
@@ -53,8 +45,20 @@ def generate_video_json(folder_path: str, output_json_path: str, cut_front_secon
                 }
             }
             
-            if part_data:
-                task_data["video_parts"] = [part_data]
+            if video_parts:
+                task_data["video_parts"] = video_parts
+            else:
+                part_data = {}
+                if cut_front_seconds > 0:
+                    part_data["cut_front_seconds"] = cut_front_seconds
+                if cut_back_seconds > 0:
+                    part_data["cut_back_seconds"] = cut_back_seconds
+                if start_chapter_name:
+                    part_data["start_chapter_name"] = start_chapter_name
+                if end_chapter_name:
+                    part_data["end_chapter_name"] = end_chapter_name
+                if part_data:
+                    task_data["video_parts"] = [part_data]
             
             json_data.append(task_data)
     
