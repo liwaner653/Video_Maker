@@ -196,33 +196,30 @@ def combine_segment_srt(segments: List[TrimSegment], output_path: str) -> bool:
     Returns:
         成功返回True，失败返回False
     """
-    # 筛选出有有效字幕文件的片段
-    srt_segments = [seg for seg in segments if seg.srt and seg.srt_path and os.path.exists(seg.srt_path)]
-    
-    if not srt_segments:
-        return False
-    
     combined_blocks = []
-    current_time = timedelta(seconds=0)  # 当前时间轴位置
+    offset = timedelta(seconds=0)  # 时间偏移量，初始为0
     
-    for seg in srt_segments:
-        # 读取当前片段的字幕内容
-        with open(seg.srt_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+    for seg in segments:
+        segment_duration = timedelta(seconds=seg.end_time - seg.start_time)
         
-        blocks = parse_srt_blocks(content)
+        if seg.srt and seg.srt_path and os.path.exists(seg.srt_path):
+            # 读取当前片段的字幕内容
+            with open(seg.srt_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            blocks = parse_srt_blocks(content)
+            
+            # 将每个字幕块的时间加上当前的offset
+            for block in blocks:
+                adjusted_block = {
+                    'start': block['start'] + offset,
+                    'end': block['end'] + offset,
+                    'text': block['text']
+                }
+                combined_blocks.append(adjusted_block)
         
-        # 将每个字幕块的时间偏移到当前时间轴位置
-        for block in blocks:
-            adjusted_block = {
-                'start': block['start'] + current_time,
-                'end': block['end'] + current_time,
-                'text': block['text']
-            }
-            combined_blocks.append(adjusted_block)
-        
-        # 更新当前时间轴位置（加上当前片段的时长）
-        current_time += timedelta(seconds=seg.end_time - seg.start_time)
+        # 无论srt为false或true，offset都要加上当前片段的duration
+        offset += segment_duration
     
     if combined_blocks:
         write_srt_blocks(combined_blocks, output_path)
@@ -287,7 +284,7 @@ class SrtCombinationStep(BaseStep):
         success = False
         
         # 分支1：处理提取字幕（context.srt_path 不为空）
-        if context.srt_path and os.path.exists(context.srt_path):
+        if context.srt_stream_index >= 0 and os.path.exists(context.srt_path):
             # 有剪辑片段且至少一个片段需要字幕 → 调整时间轴
             if context.trim_segments and any(seg.srt for seg in context.trim_segments):
                 print("📝 调整提取字幕的时间轴...")
