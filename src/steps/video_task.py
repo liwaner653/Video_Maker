@@ -35,6 +35,7 @@ class VideoPart:
     thumbnail: bool = True  # 默认true：是否生成缩略图
     srt: bool = True  # 默认true：是否生成字幕
     audio: bool = True  # 默认true：是否保留该片段的音频
+    audio_offset_chapter_start_time: str = ""  # 音频偏移章节名称，剪辑音频时减去该章节的start time
 
 @dataclass
 class FinalVideo:

@@ -63,13 +63,14 @@ def calculate_time_based_segments(
     根据 cut_front_seconds/cut_back_seconds/last_seconds 生成多个分段
     - Only cut_front_seconds: [0, cut_front) + [cut_front, duration)
     - Only cut_back_seconds: [0, duration-cut_back) + [duration-cut_back, duration)
-    - Both cut_front and cut_back: [0, cut_front) + [cut_front, duration-cut_back) + [duration-cut_back, duration)
+    - Both cut_front and cut_back: [0, cut_front) + [cut_front, duration-cut_back) + [cut_back, duration)
     - cut_front + last_seconds: [0, cut_front) + [cut_front, cut_front+last_seconds) + [cut_front+last_seconds, duration)
     """
     segments = []
     cut_front = part.cut_front_seconds if part.cut_front_seconds is not None else 0.0
     cut_back = part.cut_back_seconds if part.cut_back_seconds is not None else 0.0
     last_seconds = part.last_seconds
+    offset = 0.0
 
     has_front = cut_front > 0
     has_back = cut_back > 0
@@ -85,7 +86,8 @@ def calculate_time_based_segments(
                 end_time=main_end_time,
                 thumbnail=part.thumbnail,
                 srt=part.srt,
-                audio=part.audio
+                audio=part.audio,
+                offset=offset
             ))
         
         if main_end_time < video_duration:
@@ -94,7 +96,8 @@ def calculate_time_based_segments(
                 end_time=video_duration,
                 thumbnail=False,
                 srt=False,
-                audio=False
+                audio=False,
+                offset=offset
             ))
     elif has_front and has_back:
         main_end = video_duration - cut_back
@@ -104,7 +107,8 @@ def calculate_time_based_segments(
                 end_time=main_end,
                 thumbnail=part.thumbnail,
                 srt=part.srt,
-                audio=part.audio
+                audio=part.audio,
+                offset=offset
             ))
         if main_end < video_duration:
             segments.append(TrimSegment(
@@ -112,7 +116,8 @@ def calculate_time_based_segments(
                 end_time=video_duration,
                 thumbnail=False,
                 srt=False,
-                audio=False
+                audio=False,
+                offset=offset
             ))
     elif has_front:
         if cut_front < video_duration:
@@ -121,7 +126,8 @@ def calculate_time_based_segments(
                 end_time=video_duration,
                 thumbnail=part.thumbnail,
                 srt=part.srt,
-                audio=part.audio
+                audio=part.audio,
+                offset=offset
             ))
     elif has_back:
         main_end = video_duration - cut_back
@@ -131,7 +137,8 @@ def calculate_time_based_segments(
                 end_time=main_end,
                 thumbnail=part.thumbnail,
                 srt=part.srt,
-                audio=part.audio
+                audio=part.audio,
+                offset=offset
             ))
         if main_end < video_duration:
             segments.append(TrimSegment(
@@ -139,7 +146,8 @@ def calculate_time_based_segments(
                 end_time=video_duration,
                 thumbnail=False,
                 srt=False,
-                audio=False
+                audio=False,
+                offset=offset
             ))
     else:
         segments.append(TrimSegment(
@@ -147,7 +155,8 @@ def calculate_time_based_segments(
             end_time=video_duration,
             thumbnail=part.thumbnail,
             srt=part.srt,
-            audio=part.audio
+            audio=part.audio,
+            offset=offset
         ))
 
     return segments
@@ -181,13 +190,18 @@ def calculate_chapter_based_segments(
 
     end_time = min(end_time, video_duration)
 
+    offset = 0.0
+    if part.audio_offset_chapter_start_time and part.audio_offset_chapter_start_time in chapters:
+        offset = chapters[part.audio_offset_chapter_start_time]["start_time"]
+
     if start_time < end_time:
         segments.append(TrimSegment(
             start_time=start_time,
             end_time=end_time,
             thumbnail=part.thumbnail,
             srt=part.srt,
-            audio=part.audio
+            audio=part.audio,
+            offset=offset
         ))
 
     return segments
@@ -214,7 +228,8 @@ def calculate_trim_segments(context: TaskContext) -> bool:
             end_time=video_duration,
             thumbnail=True,
             srt=True,
-            audio=True
+            audio=True,
+            offset=0.0
         ))
         return True
 
@@ -229,13 +244,17 @@ def calculate_trim_segments(context: TaskContext) -> bool:
                 'start_time': 0.0,
                 'thumbnail': part.thumbnail,
                 'srt': part.srt,
-                'audio': part.audio
+                'audio': part.audio,
+                'offset': 0.0
             }
 
         if part.cut_front_seconds is not None:
             current_segment['start_time'] = part.cut_front_seconds
         elif part.start_chapter_name and part.start_chapter_name in chapters:
             current_segment['start_time'] = chapters[part.start_chapter_name]["start_time"]
+
+        if part.audio_offset_chapter_start_time and part.audio_offset_chapter_start_time in chapters:
+            current_segment['offset'] = chapters[part.audio_offset_chapter_start_time]["start_time"]
 
         has_end_marker = False
         end_time = video_duration
@@ -256,7 +275,8 @@ def calculate_trim_segments(context: TaskContext) -> bool:
                     end_time=end_time,
                     thumbnail=current_segment['thumbnail'],
                     srt=current_segment['srt'],
-                    audio=current_segment['audio']
+                    audio=current_segment['audio'],
+                    offset=current_segment['offset']
                 ))
             current_segment = None
         else:
@@ -275,14 +295,16 @@ def calculate_trim_segments(context: TaskContext) -> bool:
                         end_time=end_time,
                         thumbnail=current_segment['thumbnail'],
                         srt=current_segment['srt'],
-                        audio=current_segment['audio']
+                        audio=current_segment['audio'],
+                        offset=current_segment['offset']
                     ))
 
                 current_segment = {
                     'start_time': end_time,
                     'thumbnail': next_part.thumbnail,
                     'srt': next_part.srt,
-                    'audio': next_part.audio
+                    'audio': next_part.audio,
+                    'offset': 0.0
                 }
             else:
                 if current_segment['start_time'] < video_duration:
@@ -291,7 +313,8 @@ def calculate_trim_segments(context: TaskContext) -> bool:
                         end_time=video_duration,
                         thumbnail=current_segment['thumbnail'],
                         srt=current_segment['srt'],
-                        audio=current_segment['audio']
+                        audio=current_segment['audio'],
+                        offset=current_segment['offset']
                     ))
                 current_segment = None
 
@@ -300,7 +323,7 @@ def calculate_trim_segments(context: TaskContext) -> bool:
     
     for i, seg in enumerate(context.trim_segments, 1):
         duration = seg.end_time - seg.start_time
-        print(f"   分段 {i}: [{seg.start_time:.2f}s -> {seg.end_time:.2f}s] 时长={duration:.2f}s thumbnail={seg.thumbnail} srt={seg.srt} audio={seg.audio}")
+        print(f"   分段 {i}: [{seg.start_time:.2f}s -> {seg.end_time:.2f}s] 时长={duration:.2f}s thumbnail={seg.thumbnail} srt={seg.srt} audio={seg.audio} offset={seg.offset:.2f}s")
 
     segments_json = json.dumps([seg.to_json() for seg in context.trim_segments], indent=2, ensure_ascii=False)
     print(f"📋 分段 JSON:\n{segments_json}")

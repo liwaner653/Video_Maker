@@ -10,6 +10,7 @@ class TrimSegment:
     srt: bool
     audio: bool
     srt_path: str = ""  # 该片段的字幕文件路径
+    offset: float = 0.0  # 音频偏移量，剪辑音频时需要减去该值
 
     def to_json(self) -> dict:
         return {
@@ -18,7 +19,8 @@ class TrimSegment:
             "thumbnail": self.thumbnail,
             "srt": self.srt,
             "audio": self.audio,
-            "srt_path": self.srt_path
+            "srt_path": self.srt_path,
+            "offset": self.offset
         }
 
 

@@ -69,7 +69,9 @@ class AudioTrimStep(BaseStep):
         
         if len(segments) == 1:
             segment = segments[0]
-            return self._trim_single_segment(audio_path, segment.start_time, segment.end_time, output_path)
+            adjusted_start = segment.start_time - segment.offset
+            adjusted_end = segment.end_time - segment.offset
+            return self._trim_single_segment(audio_path, adjusted_start, adjusted_end, output_path)
         else:
             return self._trim_and_concatenate(audio_path, segments, output_path)
 
@@ -107,7 +109,9 @@ class AudioTrimStep(BaseStep):
             
             for i, segment in enumerate(segments):
                 segment_path = os.path.join(temp_dir, f"segment_{i:03d}{os.path.splitext(audio_path)[1]}")
-                if not self._trim_single_segment(audio_path, segment.start_time, segment.end_time, segment_path):
+                adjusted_start = segment.start_time - segment.offset
+                adjusted_end = segment.end_time - segment.offset
+                if not self._trim_single_segment(audio_path, adjusted_start, adjusted_end, segment_path):
                     return None
                 segment_files.append(segment_path)
             

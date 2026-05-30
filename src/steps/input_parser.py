@@ -183,6 +183,8 @@ class InputParser:
         if end_chapter_name is not None:
             end_chapter_name = end_chapter_name.strip()
         
+        audio_offset_chapter_start_time = part_data.get('audio_offset_chapter_start_time', "").strip()
+        
         thumbnail = bool(part_data.get('thumbnail', True))
         srt = bool(part_data.get('srt', True))
         audio = bool(part_data.get('audio', True))
@@ -196,5 +198,6 @@ class InputParser:
             end_chapter_name=end_chapter_name,
             thumbnail=thumbnail,
             srt=srt,
-            audio=audio
+            audio=audio,
+            audio_offset_chapter_start_time=audio_offset_chapter_start_time
         )
