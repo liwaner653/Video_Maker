@@ -55,12 +55,14 @@ class GenerateSubtitlesStep(BaseStep):
         srt_segment_indices = [i for i, seg in enumerate(context.trim_segments) if seg.srt]
         
         for i, (seg_idx, segment) in enumerate(zip(srt_segment_indices, srt_segments)):
+            adjusted_start_time = segment.start_time - segment.offset
+            adjusted_end_time = segment.end_time - segment.offset
             srt_path = generate_subtitles_for_segment(
                 video_path=task.video_path,
                 audio_path=context.audio_path,
                 output_dir=context.subtitle_dir,
-                start_time=segment.start_time,
-                end_time=segment.end_time,
+                start_time=adjusted_start_time,
+                end_time=adjusted_end_time,
                 segment_index=i,
                 video_name_no_ext=name_no_ext,
                 model='turbo',
