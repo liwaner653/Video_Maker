@@ -5,7 +5,9 @@ import argparse
 
 from steps.post_processing_step import PostProcessingStep
 from steps.context import BatchContext
-from steps.video_compose_step import VideoComposeStep
+from steps.pic_video_merge_step import PicVideoMergeStep
+from steps.video_trim_step import VideoTrimStep
+from steps.video_merge_step import VideoMergeStep
 from steps.extract_audio.extract_audio_step import AudioStep
 from steps.extract_audio.audio_trim_step import AudioTrimStep
 from steps.generate_thumbnail import ThumbnailStep
@@ -33,7 +35,7 @@ def main(json_path):
                       GenerateSubtitlesStep(), 
                       SrtCombinationStep(debug=config.DEBUG),
                       AudioTrimStep(),
-                      VideoComposeStep()]
+                      PicVideoMergeStep()]
     total = len(batch_ctx.task_contexts)
     
     # 阶段2：循环处理每个视频
@@ -54,4 +56,4 @@ def main(json_path):
         PostProcessingStep().run(batch_ctx)
 
 if __name__ == "__main__":
-    main(r"D:\sysu\10_myself\8_projects\Video_Maker\test\24_min_with_srt\json.json")
+    main(r"D:\sysu\10_myself\8_projects\Video_Maker\test\16h_srt\json.json")

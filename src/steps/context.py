@@ -39,6 +39,7 @@ class TaskContext:
     thumb_path: str = ""
     audio_path: str = ""
     srt_path: str = ""
+    trimmed_video_path: str = ""  # 裁剪后的视频路径
     final_video_path: str = ""
 
     srt_stream_index: int = -1  # SRT字幕轨道索引，-1表示未设置

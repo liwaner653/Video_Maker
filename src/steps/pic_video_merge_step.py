@@ -6,7 +6,7 @@ import subprocess
 from steps.base_step import BaseStep
 from steps.context import TaskContext
 
-class VideoComposeStep(BaseStep):
+class PicVideoMergeStep(BaseStep):
     @property
     def step_name(self): return "视频合成"
 
