@@ -297,15 +297,7 @@ class SrtCombinationStep(BaseStep):
         
         # 分支2：处理生成字幕（片段的 srt_path 不为空）
         elif srt_paths:
-            # 多个片段有字幕 → 合并字幕
-            if len(srt_paths) > 1:
-                print("📝 合并多个片段的字幕文件...")
                 success = combine_segment_srt(context.trim_segments, output_srt_path)
-            # 单个片段有字幕 → 直接使用
-            elif len(srt_paths) == 1:
-                print("📝 使用单个生成的字幕文件")
-                success = True
-                output_srt_path = srt_paths[0]
         
         # 处理结果
         if success and os.path.exists(output_srt_path):
