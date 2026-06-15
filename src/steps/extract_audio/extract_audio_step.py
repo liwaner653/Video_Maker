@@ -133,28 +133,6 @@ def find_audio_stream_by_language(video_path: str, language: str) -> int:
     return 0  # 默认返回第一个音轨
 
 
-def extract_audio_acc_language(
-    video_path: str,
-    output_dir: str,
-    language: str
-) -> Optional[str]:
-    """
-    根据给定的语言缩写，智能提取对应的音轨（保留向后兼容）
-    
-    :param video_path: 视频文件路径
-    :param output_dir: 输出目录
-    :param language: 语言代码
-    :return: 生成的音频文件路径，失败返回None
-    """
-    audio_stream_index = find_audio_stream_by_language(video_path, language)
-    
-    if audio_stream_index < 0:
-        return None
-    
-    extractor = AudioExtractor()
-    return extractor.extract_audio(video_path, output_dir, audio_stream_index)
-
-
 def extract_audio(
     video_path: str,
     output_dir: str,

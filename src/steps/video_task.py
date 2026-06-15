@@ -41,6 +41,7 @@ class VideoPart:
 class FinalVideo:
     """最终视频配置"""
     check_exist: bool = False  # 如果为true，则跳过video_compose_step步骤；为false，则覆盖文件
+    additional_video_path: str = ""  # 额外mp4文件路径，为空则不合并
 
 @dataclass
 class VideoTask:

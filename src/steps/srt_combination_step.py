@@ -188,6 +188,7 @@ def combine_segment_srt(segments: List[TrimSegment], output_path: str) -> bool:
     1. 依次读取每个片段的字幕文件
     2. 将字幕时间依次偏移，保证时间轴连续
     3. 合并所有字幕块并写入输出文件
+    4. 删除用于合并的源srt文件，只保留合并后的文件
     
     Args:
         segments: 剪辑片段列表（包含字幕路径信息）
@@ -198,18 +199,19 @@ def combine_segment_srt(segments: List[TrimSegment], output_path: str) -> bool:
     """
     combined_blocks = []
     offset = timedelta(seconds=0)  # 时间偏移量，初始为0
+    source_srt_paths = []  # 记录用于合并的源srt文件路径
     
     for seg in segments:
         segment_duration = timedelta(seconds=seg.end_time - seg.start_time)
         
         if seg.srt and seg.srt_path and os.path.exists(seg.srt_path):
-            # 读取当前片段的字幕内容
+            source_srt_paths.append(seg.srt_path)
+            
             with open(seg.srt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
             blocks = parse_srt_blocks(content)
             
-            # 将每个字幕块的时间加上当前的offset
             for block in blocks:
                 adjusted_block = {
                     'start': block['start'] + offset,
@@ -218,11 +220,18 @@ def combine_segment_srt(segments: List[TrimSegment], output_path: str) -> bool:
                 }
                 combined_blocks.append(adjusted_block)
         
-        # 无论srt为false或true，offset都要加上当前片段的duration
         offset += segment_duration
     
     if combined_blocks:
         write_srt_blocks(combined_blocks, output_path)
+        
+        for srt_path in source_srt_paths:
+            try:
+                os.remove(srt_path)
+                print(f"🗑️ 删除源字幕文件: {srt_path}")
+            except Exception as e:
+                print(f"⚠️ 删除源字幕文件失败 {srt_path}: {e}")
+        
         return True
     return False
 
