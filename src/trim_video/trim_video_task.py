@@ -25,6 +25,7 @@ class TrimSubtitleConfig:
     subtitle_stream_index: int = -1 # 指定字幕轨道索引（-1表示自动检测）
     burn_in: bool = True            # 是否烧入视频
     enabled: bool = True            # 是否启用字幕
+    target_titles: List[str] = field(default_factory=lambda: ['english'])  # 字幕标题关键字过滤列表（OR逻辑），非必填
 
 
 @dataclass

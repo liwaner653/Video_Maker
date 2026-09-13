@@ -17,7 +17,8 @@ def generate_trim_json(
     output_dir: str = "",
     output_format: str = "mp4",
     crf: int = 23,
-    preset: str = "medium"
+    preset: str = "medium",
+    subtitle_target_titles: list = None
 ) -> bool:
     """
     生成视频剪辑任务的JSON配置文件
@@ -36,8 +37,11 @@ def generate_trim_json(
     :param output_format: 输出格式
     :param crf: 视频质量CRF值
     :param preset: 编码预设
+    :param subtitle_target_titles: 字幕标题关键字过滤列表，默认 ['english']
     :return: 是否成功
     """
+    if subtitle_target_titles is None:
+        subtitle_target_titles = ['english']
     config = {
         "video_path": video_path,
         "output_dir": output_dir,
@@ -51,7 +55,8 @@ def generate_trim_json(
             "language": subtitle_language,
             "subtitle_stream_index": subtitle_stream_index,
             "burn_in": subtitle_burn_in,
-            "enabled": subtitle_enabled
+            "enabled": subtitle_enabled,
+            "target_titles": subtitle_target_titles
         },
         "output_format": output_format,
         "crf": crf,

@@ -22,7 +22,8 @@
         "language": "en",
         "subtitle_stream_index": -1,
         "burn_in": true,
-        "enabled": true
+        "enabled": true,
+        "target_titles": ["english"]
     },
     "output_format": "mp4",
     "crf": 23,

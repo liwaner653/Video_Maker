@@ -45,9 +45,10 @@ def get_audio_stream_indices(video_path: str, target_lang: str = "") -> list:
     return matching_indices
 
 
-def extract_subtitle_from_video(video_path: str, output_dir: str, target_lang: str = "") -> Optional[str]:
+def extract_subtitle_from_video(video_path: str, output_dir: str, target_lang: str = "", target_titles: list = None) -> Optional[str]:
     """从视频中提取指定语言的字幕"""
-    target_titles = ['cc', 'sdh']
+    if target_titles is None:
+        target_titles = ['english']
     matching_indices = get_target_subtitle_indices(video_path, target_lang, target_titles)
     
     if matching_indices:
@@ -176,7 +177,7 @@ def process_trim_task(task: TrimVideoTask) -> Optional[str]:
                 if extracted_files:
                     srt_path = extracted_files[0]
             else:
-                srt_path = extract_subtitle_from_video(video_path, subtitle_dir, task.subtitle.language)
+                srt_path = extract_subtitle_from_video(video_path, subtitle_dir, task.subtitle.language, task.subtitle.target_titles)
             
             # 调整字幕时间戳
             if srt_path:
@@ -234,12 +235,26 @@ def _parse_task(data: dict) -> TrimVideoTask:
         enabled=bool(data.get('audio', {}).get('enabled', True))
     )
     
-    subtitle_config = TrimSubtitleConfig(
-        language=data.get('subtitle', {}).get('language', ""),
-        subtitle_stream_index=int(data.get('subtitle', {}).get('subtitle_stream_index', -1)),
-        burn_in=bool(data.get('subtitle', {}).get('burn_in', True)),
-        enabled=bool(data.get('subtitle', {}).get('enabled', True))
-    )
+    subtitle_data = data.get('subtitle', {})
+    target_titles = subtitle_data.get('target_titles')
+    if target_titles is not None:
+        if not isinstance(target_titles, list):
+            raise ValueError("subtitle对象的target_titles必须是数组")
+        target_titles = [str(t).strip() for t in target_titles]
+        subtitle_config = TrimSubtitleConfig(
+            language=subtitle_data.get('language', ""),
+            subtitle_stream_index=int(subtitle_data.get('subtitle_stream_index', -1)),
+            burn_in=bool(subtitle_data.get('burn_in', True)),
+            enabled=bool(subtitle_data.get('enabled', True)),
+            target_titles=target_titles
+        )
+    else:
+        subtitle_config = TrimSubtitleConfig(
+            language=subtitle_data.get('language', ""),
+            subtitle_stream_index=int(subtitle_data.get('subtitle_stream_index', -1)),
+            burn_in=bool(subtitle_data.get('burn_in', True)),
+            enabled=bool(subtitle_data.get('enabled', True))
+        )
     
     return TrimVideoTask(
         video_path=data['video_path'],
@@ -265,7 +280,7 @@ def run_trim_from_json(json_path: str) -> None:
 
 
 if __name__ == "__main__":
-    json_path = r"D:\sysu\10_myself\8_projects\Video_Maker\src\trim_video\example_trim_config.json"
+    json_path = r"C:\Users\12864\Desktop\1\witch\json.json"
     
     print(f"📂 使用配置文件: {json_path}")
     run_trim_from_json(json_path)
