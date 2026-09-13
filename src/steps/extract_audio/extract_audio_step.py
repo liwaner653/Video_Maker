@@ -18,7 +18,8 @@ LANG_MAP = {
     'ja': ['japanese', 'jpn', 'ja'],
     'fr': ['french', 'fre', 'fra', 'fr'],
     'es': ['spanish', 'spa', 'es'],
-    'ru': ['russian', 'rus', 'ru']
+    'ru': ['russian', 'rus', 'ru'],
+    'pt': ['portuguese', 'por', 'pt'],
 }
 
 class AudioStep(BaseStep):
