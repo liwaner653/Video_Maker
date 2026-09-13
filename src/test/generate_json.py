@@ -59,7 +59,8 @@ def create_video_parts_from_chapters(video_path: str) -> list:
 def generate_video_json(folder_path: str, output_json_path: str, video_parts: list = None,
                         auto_detect_chapters: bool = False,
                         cut_front_seconds=0.0, cut_back_seconds=0.0, start_chapter_name="", end_chapter_name="",
-                        default_sub_lang: str = "de", default_pic_path: str = "", default_blur_sigma: float = 0.0):
+                        default_sub_lang: str = "de", default_pic_path: str = "", default_blur_sigma: float = 0.0,
+                        default_target_titles: list = None):
     """
     从视频文件夹生成JSON配置文件
     Args:
@@ -73,7 +74,10 @@ def generate_video_json(folder_path: str, output_json_path: str, video_parts: li
         end_chapter_name: 默认结束章节名称
         default_sub_lang: 默认字幕语言，默认德语"de"
         default_blur_sigma: 默认模糊度，默认0.0(不模糊)
+        default_target_titles: 默认字幕标题关键字过滤列表，默认 ['cc', 'sdh', 'Dub']
     """
+    if default_target_titles is None:
+        default_target_titles = ['cc', 'sdh', 'Dub']
     if not os.path.isdir(folder_path):
         raise ValueError(f"文件夹不存在：{folder_path}")
     
@@ -92,7 +96,7 @@ def generate_video_json(folder_path: str, output_json_path: str, video_parts: li
                 "subtitle": {
                     "subtitle_lang": default_sub_lang,
                     "check_exist": True,
-                    "target_titles": ["cc", "sdh", "Dub"]
+                    "target_titles": default_target_titles
                 },
                 "thumbnail": {
                     "pic_path": default_pic_path,
