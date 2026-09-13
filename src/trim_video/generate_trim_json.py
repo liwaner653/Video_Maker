@@ -5,6 +5,7 @@ from typing import Optional, List
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'steps'))
 from util import get_video_duration
+from config import VIDEO_EXTENSIONS
 
 
 def generate_trim_json(
@@ -160,10 +161,9 @@ def interactive_generate_json(
         subtitle_target_titles = ['english']
     
     # 遍历文件夹中的视频文件，每个视频生成一个 JSON 对象
-    video_extensions = ('.mp4', '.mkv', '.avi', '.mov')
     json_data = []
     for filename in sorted(os.listdir(video_path)):
-        if filename.lower().endswith(video_extensions):
+        if filename.lower().endswith(VIDEO_EXTENSIONS):
             video_file = os.path.abspath(os.path.join(video_path, filename))
             
             # end_time 为 None 时取该视频总时长

@@ -3,6 +3,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'steps'))
 from util import get_video_chapters
+from config import VIDEO_EXTENSIONS
 
 
 def create_video_parts_from_chapters(video_path: str) -> list:
@@ -81,10 +82,9 @@ def generate_video_json(folder_path: str, output_json_path: str, video_parts: li
     if not os.path.isdir(folder_path):
         raise ValueError(f"文件夹不存在：{folder_path}")
     
-    video_extensions = ('.mp4', '.mkv', '.avi', '.mov')
     json_data = []
     for filename in os.listdir(folder_path):
-        if filename.lower().endswith(video_extensions):
+        if filename.lower().endswith(VIDEO_EXTENSIONS):
             video_path = os.path.abspath(os.path.join(folder_path, filename))
             
             task_data = {
