@@ -3,7 +3,7 @@ import subprocess
 import json
 import os
 from steps.base_step import BaseStep
-from steps.config import VIDEO_EXTENSIONS
+from steps.config import VIDEO_EXTENSIONS, LANG_MAP
 from steps.context import TaskContext
 from steps.subtitle.subtitle_handler import (
     SubtitleHandlerFactory,
@@ -222,7 +222,8 @@ class ExtractSubtitlesStep(BaseStep):
             return True
         
         # 使用字幕语言作为过滤条件
-        subtitle_lang = task.subtitle.subtitle_lang
+        target_langs = LANG_MAP.get(task.subtitle.subtitle_lang.lower(), [task.subtitle.subtitle_lang.lower()])
+        subtitle_lang = target_langs[1]
         target_titles = task.subtitle.target_titles
         
         matching_indices = get_target_subtitle_indices(

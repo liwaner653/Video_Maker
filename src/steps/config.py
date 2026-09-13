@@ -10,3 +10,15 @@ DEBUG = True
 
 # 支持的视频文件扩展名
 VIDEO_EXTENSIONS = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.ts')
+
+# 语言缩写到全称映射字典
+LANG_MAP = {
+    'en': ['english', 'eng', 'en'],
+    'de': ['german', 'ger', 'deu', 'de'],
+    'zh': ['chinese', 'chi', 'zho', 'zh'],
+    'ja': ['japanese', 'jpn', 'ja'],
+    'fr': ['french', 'fre', 'fra', 'fr'],
+    'es': ['spanish', 'spa', 'es'],
+    'ru': ['russian', 'rus', 'ru'],
+    'pt': ['portuguese', 'por', 'pt'],
+}
