@@ -122,7 +122,15 @@ class InputParser:
                 if not sub_lang:
                     raise ValueError(f"JSON第{idx+1}项字幕语言不能为空")
                 check_exist = bool(sub_data.get('check_exist', False))
-                subtitle = Subtitle(sub_lang, check_exist=check_exist)
+                # 解析可选的target_titles字段，默认值由Subtitle dataclass提供
+                target_titles = sub_data.get('target_titles')
+                if target_titles is not None:
+                    if not isinstance(target_titles, list):
+                        raise ValueError(f"JSON第{idx+1}项subtitle对象的target_titles必须是数组")
+                    target_titles = [str(t).strip() for t in target_titles]
+                    subtitle = Subtitle(sub_lang, check_exist=check_exist, target_titles=target_titles)
+                else:
+                    subtitle = Subtitle(sub_lang, check_exist=check_exist)
             
             # 解析thumbnail对象
             thumbnail_data = item['thumbnail']

@@ -14,6 +14,7 @@ class Subtitle:
     """字幕相关配置"""
     subtitle_lang: str
     check_exist: bool = False  # 是否检查输出目录中的同名文件是否存在
+    target_titles: List[str] = field(default_factory=lambda: ['cc', 'sdh', 'Dub'])  # 字幕标题关键字过滤列表（OR逻辑），非必填
 
 @dataclass
 class Thumbnail:

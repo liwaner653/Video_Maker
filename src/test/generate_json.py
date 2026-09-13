@@ -91,7 +91,8 @@ def generate_video_json(folder_path: str, output_json_path: str, video_parts: li
                 },
                 "subtitle": {
                     "subtitle_lang": default_sub_lang,
-                    "check_exist": True
+                    "check_exist": True,
+                    "target_titles": ["cc", "sdh", "Dub"]
                 },
                 "thumbnail": {
                     "pic_path": default_pic_path,
