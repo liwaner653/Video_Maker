@@ -280,7 +280,7 @@ def run_trim_from_json(json_path: str) -> None:
 
 
 if __name__ == "__main__":
-    json_path = r"C:\Users\12864\Desktop\1\witch\json.json"
+    json_path = r"C:\Users\12864\Desktop\1\witch\trim.json"
     
     print(f"📂 使用配置文件: {json_path}")
     run_trim_from_json(json_path)
