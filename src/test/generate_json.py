@@ -46,7 +46,7 @@ def create_video_parts_from_chapters(video_path: str) -> list:
         elif last_chapter_skip_srt:
             last_chapter_skip_srt = False
             video_parts.append({
-                "start_chapter_name": chapter_name,
+                "start_chapter_name": chapter_name
             })
     
     # 如果没有任何章节包含关键词，返回空列表
@@ -133,5 +133,5 @@ if __name__ == "__main__":
     generate_video_json(input_dir, os.path.join(input_dir, "json.json"), 
                         default_sub_lang='en'
                         #, default_blur_sigma=5.0
-                        , auto_detect_chapters=True
+                        #, auto_detect_chapters=True
                         )

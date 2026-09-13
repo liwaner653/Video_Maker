@@ -35,7 +35,7 @@ def merge_video_audio_subtitle(
         command = [
             'ffmpeg', '-y',
             '-i', trimmed_video_path,
-            '-i', audio_path.replace('\\', '/')
+            '-i', audio_path
         ]
 
         if has_srt:
