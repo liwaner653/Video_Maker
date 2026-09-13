@@ -1,6 +1,8 @@
 import os
 import re
 import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'steps'))
+from config import VIDEO_EXTENSIONS
 
 def process_videos(folder_path):
     if not os.path.isdir(folder_path):
@@ -8,10 +10,9 @@ def process_videos(folder_path):
         return
     
     titles = []
-    video_extensions = ('.mkv', '.mp4', '.avi', '.mov', '.flv', '.wmv')
     
     for filename in os.listdir(folder_path):
-        if filename.lower().endswith(video_extensions):
+        if filename.lower().endswith(VIDEO_EXTENSIONS):
             match = re.search(r'-([^\[]+)\[', filename)
             if match:
                 title = match.group(1).strip()

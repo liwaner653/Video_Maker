@@ -9,4 +9,4 @@ GIT_REPO_PATH = r"D:\waner\6_projects\Anime_Deutsch_Learning\other languages"
 DEBUG = True
 
 # 支持的视频文件扩展名
-VIDEO_EXTENSIONS = ('.mp4', '.mkv', '.avi', '.mov')
+VIDEO_EXTENSIONS = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.ts')

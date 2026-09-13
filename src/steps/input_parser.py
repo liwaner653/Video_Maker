@@ -4,6 +4,7 @@ import json
 from typing import List
 import argparse
 from steps.base_step import BaseStep
+from steps.config import VIDEO_EXTENSIONS
 from steps.context import BatchContext, TaskContext
 from steps.video_task import VideoTask, VideoPart, Audio, Subtitle, Thumbnail, FinalVideo
 
@@ -49,17 +50,16 @@ class InputParser:
     
     def _parse_folder(self):
         """解析文件夹：遍历视频文件，默认音轨0、不裁剪、德语字幕"""
-        video_extensions = ('.mp4', '.mkv', '.avi', '.mov')
         for filename in os.listdir(self.input_str):
-            if filename.lower().endswith(video_extensions):
+            if filename.lower().endswith(VIDEO_EXTENSIONS):
                 video_path = os.path.join(self.input_str, filename)
                 self.video_tasks.append(
                     VideoTask(
                         video_path=video_path,
                         audio=Audio(audio_stream_index=0, check_exist=False),
                         parts=[VideoPart()],
-                        subtitle=Subtitle(subtitle_lang="de", check_exist=False),
-                        thumbnail=Thumbnail(pic_path="", blur_sigma=0.0, check_exist=False),
+                        subtitle=Subtitle(subtitle_lang="en", check_exist=True),
+                        thumbnail=Thumbnail(pic_path="", blur_sigma=0.0, check_exist=True),
                         final_video=FinalVideo(check_exist=False)
                     )
                 )
@@ -81,7 +81,7 @@ class InputParser:
         
         for idx, item in enumerate(json_data):
             # 检查必填字段
-            required_fields = ['video_path', 'subtitle', 'thumbnail']
+            required_fields = ['video_path']
             missing_fields = [f for f in required_fields if f not in item]
             if missing_fields:
                 raise ValueError(f"JSON第{idx+1}项缺少字段：{missing_fields}")
@@ -121,7 +121,7 @@ class InputParser:
                 sub_lang = sub_data['subtitle_lang'].strip()
                 if not sub_lang:
                     raise ValueError(f"JSON第{idx+1}项字幕语言不能为空")
-                check_exist = bool(sub_data.get('check_exist', False))
+                check_exist = bool(sub_data.get('check_exist', True))
                 # 解析可选的target_titles字段，默认值由Subtitle dataclass提供
                 target_titles = sub_data.get('target_titles')
                 if target_titles is not None:
@@ -132,16 +132,18 @@ class InputParser:
                 else:
                     subtitle = Subtitle(sub_lang, check_exist=check_exist)
             
-            # 解析thumbnail对象
-            thumbnail_data = item['thumbnail']
-            pic_path = thumbnail_data.get('pic_path', "").strip()
-            if pic_path and not os.path.isfile(pic_path):
-                raise ValueError(f"JSON第{idx+1}项thumbnail对象指定的封面图片不存在：{pic_path}")
-            blur_sigma = float(thumbnail_data.get('blur_sigma', 0.0))
-            if blur_sigma < 0:
-                blur_sigma = 0.0
-            check_exist = bool(thumbnail_data.get('check_exist', False))
-            thumbnail = Thumbnail(pic_path, blur_sigma, check_exist=check_exist)
+            # 解析可选的thumbnail对象
+            thumbnail = Thumbnail()
+            if 'thumbnail' in item:
+                thumbnail_data = item['thumbnail']
+                pic_path = thumbnail_data.get('pic_path', "").strip()
+                if pic_path and not os.path.isfile(pic_path):
+                    raise ValueError(f"JSON第{idx+1}项thumbnail对象指定的封面图片不存在：{pic_path}")
+                blur_sigma = float(thumbnail_data.get('blur_sigma', 0.0))
+                if blur_sigma < 0:
+                    blur_sigma = 0.0
+                check_exist = bool(thumbnail_data.get('check_exist', True))
+                thumbnail = Thumbnail(pic_path, blur_sigma, check_exist=check_exist)
             
             # 解析可选的final_video对象
             final_video = FinalVideo(check_exist=False)

@@ -3,15 +3,13 @@ import subprocess
 import json
 import os
 from steps.base_step import BaseStep
+from steps.config import VIDEO_EXTENSIONS
 from steps.context import TaskContext
 from steps.subtitle.subtitle_handler import (
     SubtitleHandlerFactory,
     CodecToFormatMapper,
     SubtitleHandler
 )
-
-# 定义支持的视频文件后缀，用于在文件夹模式下过滤非视频文件
-VIDEO_EXTENSIONS = {'.mkv', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.ts'}
 
 
 def get_target_subtitle_indices(video_path: str, target_lang: str = "", target_title: list = None) -> list:
