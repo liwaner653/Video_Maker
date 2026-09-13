@@ -109,9 +109,9 @@ def find_audio_stream_by_language(video_path: str, language: str) -> int:
         "-show_entries", "stream=index:stream_tags=language,title",
         "-of", "json", video_path
     ]
-    
+
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, encoding="utf-8", text=True, check=True)
         streams = json.loads(result.stdout).get('streams', [])
     except Exception as e:
         print(f"❌ 获取视频音轨信息失败: {e}")
