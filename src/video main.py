@@ -7,7 +7,7 @@ from steps.post_processing_step import PostProcessingStep
 from steps.context import BatchContext
 from steps.video_trim_step import VideoTrimStep
 from steps.video_merge_step import VideoMergeStep
-from steps.extract_audio.extract_audio_step import AudioStep
+from steps.extract_audio_step import AudioStep
 from steps.extract_audio.audio_trim_step import AudioTrimStep
 from steps.extract_subtitles import ExtractSubtitlesStep
 from steps.input_parser import ParseJsonStep

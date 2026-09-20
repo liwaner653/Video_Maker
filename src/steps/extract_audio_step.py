@@ -2,25 +2,14 @@
 # extract_audio.py
 import json
 import os
-import sys
 import subprocess
 from typing import Optional
-from ..base_step import BaseStep
-from ..context import TaskContext
-from ..util import get_video_duration
-from .audio_codec import AudioExtractor, AudioCodecDetector
+from .base_step import BaseStep
+from .context import TaskContext
+from .extract_audio.audio_codec import AudioExtractor
+from steps.config import LANG_MAP
 
-# 2. 语言缩写到全称映射字典
-LANG_MAP = {
-    'en': ['english', 'eng', 'en'],
-    'de': ['german', 'ger', 'deu', 'de'],
-    'zh': ['chinese', 'chi', 'zho', 'zh'],
-    'ja': ['japanese', 'jpn', 'ja'],
-    'fr': ['french', 'fre', 'fra', 'fr'],
-    'es': ['spanish', 'spa', 'es'],
-    'ru': ['russian', 'rus', 'ru'],
-    'pt': ['portuguese', 'por', 'pt'],
-}
+
 
 class AudioStep(BaseStep):
     """音频提取步骤，使用智能编码检测和流复制提取"""
@@ -103,6 +92,7 @@ def find_audio_stream_by_language(video_path: str, language: str) -> int:
     :return: 音轨索引，如果找不到返回-1
     """
     target_langs = LANG_MAP.get(language.lower(), [language.lower()])
+
     
     # 获取视频的所有音轨信息
     cmd = [
@@ -125,7 +115,7 @@ def find_audio_stream_by_language(video_path: str, language: str) -> int:
         title_tag = tags.get('title', '').lower()
         
         # 匹配逻辑：音轨的language或者title包含目标语言的值
-        if any(tl in lang_tag for tl in target_langs) or any(tl in title_tag for tl in target_langs):
+        if any(tl in lang_tag for tl in target_langs): # or any(tl in title_tag for tl in target_langs):
             matched_info = f"索引: {idx}, 语言标签: '{lang_tag}', 标题: '{title_tag}'"
             print(f"✅ 匹配到语言音轨 -> {matched_info}")
             return idx

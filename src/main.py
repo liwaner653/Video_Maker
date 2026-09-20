@@ -8,7 +8,7 @@ from steps.context import BatchContext
 from steps.pic_video_merge_step import PicVideoMergeStep
 from steps.video_trim_step import VideoTrimStep
 from steps.video_merge_step import VideoMergeStep
-from steps.extract_audio.extract_audio_step import AudioStep
+from steps.extract_audio_step import AudioStep
 from steps.extract_audio.audio_trim_step import AudioTrimStep
 from steps.generate_thumbnail import ThumbnailStep
 from steps.extract_subtitles import ExtractSubtitlesStep

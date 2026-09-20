@@ -8,7 +8,7 @@ from typing import Optional, List, Dict
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from steps.extract_subtitles import get_target_subtitle_indices, extract_mkv_subtitles
-from steps.extract_audio.extract_audio_step import find_audio_stream_by_language
+from steps.extract_audio_step import find_audio_stream_by_language
 from steps.subtitle.subtitle_handler import SubtitleHandlerFactory
 from trim_video.trim_video_task import TrimVideoTask, TrimSegment, TrimAudioConfig, TrimSubtitleConfig
 
@@ -113,7 +113,7 @@ def burn_subtitle_to_video(video_path: str, srt_path: str, output_path: str) -> 
     cmd = [
         'ffmpeg', '-y', '-v', 'error',
         '-i', video_path,
-        '-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei,FontSize=24,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=1,Shadow=2,MarginV=20'",
+        '-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei,FontSize=16,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=1,Shadow=2,MarginV=20'",
         '-c:a', 'copy',
         '-c:v', 'libx264',
         '-preset', 'medium',
