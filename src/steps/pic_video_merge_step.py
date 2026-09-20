@@ -15,7 +15,7 @@ class PicVideoMergeStep(BaseStep):
         if context.task.final_video.check_exist:
             # 计算预期的输出路径
             base_name = os.path.splitext(os.path.basename(context.audio_path))[0]
-            expected_video_path = os.path.join(context.final_video_dir, f"{base_name}.mp4")
+            expected_video_path = os.path.join(context.final_video_dir, f"{base_name}.mkv")
             
             if os.path.exists(expected_video_path):
                 print(f"⏭️ 跳过视频合成（check_exist=true，文件已存在）: {expected_video_path}")
@@ -56,7 +56,7 @@ def embed_subtitle_to_video(
     # 2. 准备输出路径 (统一正斜杠，防止路径拼接报错)
     os.makedirs(output_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(audio_path))[0]
-    output_video_path = os.path.join(output_dir, f"{base_name}.mp4").replace('\\', '/')
+    output_video_path = os.path.join(output_dir, f"{base_name}.mkv").replace('\\', '/')
     
     # 3. 处理字幕路径 (关键修复：转义Windows盘符冒号，防止FFmpeg解析失败)
     safe_srt_path = srt_path.replace('\\', '/').replace(':', r'\:').replace("'", "\\'")
@@ -87,7 +87,7 @@ def embed_subtitle_to_video(
         output_video_path
     ])
     
-    print(f"📽️ 开始合成：{base_name}.mp4")
+    print(f"📽️ 开始合成：{base_name}.mkv")
     try:
         # capture_output=True 可以截获输出，如果报错可以通过 e.stderr 打印具体原因
         subprocess.run(command, check=True, capture_output=True, text=True)
@@ -194,7 +194,7 @@ def batch_embed_subtitles(
             # 根据原函数逻辑，已存在返回None，报错也返回None。
             # 为了区分，我们可以检查输出文件是否存在来反推，或者简单归类。
             # 这里暂且将非成功生成的都视为未新增成功（包含已存在和失败）
-            if os.path.exists(os.path.join(output_dir, f"{base_name}.mp4")):
+            if os.path.exists(os.path.join(output_dir, f"{base_name}.mkv")):
                  skip_count += 1 # 实际上是已存在
             else:
                  fail_count += 1
