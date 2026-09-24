@@ -274,7 +274,19 @@ class SrtCombinationStep(BaseStep):
             始终返回True（失败时会清空context.srt_path）
         """
         task = context.task
-        
+
+        # 构建输出路径
+        output_srt_path = os.path.join(
+            context.subtitle_dir,
+            f"{os.path.splitext(os.path.basename(task.video_path))[0]}_combined.srt"
+        )
+
+        # 如果check_exist为True，检查已合并的字幕文件是否存在，存在则直接复用
+        if task.subtitle and task.subtitle.check_exist and os.path.exists(output_srt_path):
+            print(f"⏭️ 跳过字幕合并（check_exist=true，文件已存在）: {output_srt_path}")
+            context.srt_path = output_srt_path
+            return True
+
         # 收集所有片段的字幕路径（生成字幕场景）
         srt_paths = [seg.srt_path for seg in context.trim_segments if seg.srt and seg.srt_path]
         
@@ -283,12 +295,6 @@ class SrtCombinationStep(BaseStep):
             print("⚠️ 没有可处理的字幕文件")
             context.srt_path = ""
             return True
-        
-        # 构建输出路径
-        output_srt_path = os.path.join(
-            context.subtitle_dir,
-            f"{os.path.splitext(os.path.basename(task.video_path))[0]}_combined.srt"
-        )
         
         success = False
         
