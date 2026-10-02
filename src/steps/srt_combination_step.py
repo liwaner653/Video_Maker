@@ -282,9 +282,8 @@ class SrtCombinationStep(BaseStep):
         )
 
         # 如果check_exist为True，检查已合并的字幕文件是否存在，存在则直接复用
-        if task.subtitle and task.subtitle.check_exist and os.path.exists(output_srt_path):
-            print(f"⏭️ 跳过字幕合并（check_exist=true，文件已存在）: {output_srt_path}")
-            context.srt_path = output_srt_path
+        if task.subtitle and task.subtitle.check_exist and os.path.exists(context.srt_path):
+            print(f"⏭️ 跳过字幕合并（check_exist=true，文件已存在）: {context.srt_path}")
             return True
 
         # 收集所有片段的字幕路径（生成字幕场景）
