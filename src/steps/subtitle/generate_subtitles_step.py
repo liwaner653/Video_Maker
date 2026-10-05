@@ -15,9 +15,9 @@ class GenerateSubtitlesStep(BaseStep):
     def execute(self, context: TaskContext) -> bool:
         task = context.task
 
-        # 如果check_exist为True，检查输出目录中是否存在同名字幕文件
+        # 如果check_exist为True，检查最终字幕产物是否已存在
         if task.subtitle and task.subtitle.check_exist:
-            existing_srt = self._find_existing_subtitle(task.video_path, context.subtitle_dir)
+            existing_srt = self._find_existing_subtitle(context.final_srt_path)
             if existing_srt:
                 print(f"✅ 检测到已存在的字幕文件：{existing_srt}")
                 context.srt_path = existing_srt
@@ -85,32 +85,15 @@ class GenerateSubtitlesStep(BaseStep):
             
         return True
 
-    def _find_existing_subtitle(self, video_path: str, output_dir: str) -> Optional[str]:
+    def _find_existing_subtitle(self, final_srt_path: str) -> Optional[str]:
         """
-        查找输出目录中是否存在与视频文件同名的字幕文件
+        检查最终字幕产物（canonical路径）是否已存在
 
-        :param video_path: 视频文件路径
-        :param output_dir: 输出目录
-        :return: 存在则返回完整路径，否则返回None
+        :param final_srt_path: 最终字幕产物路径（{subtitle_dir}/{视频名}.srt）
+        :return: 存在则返回该路径，否则返回None
         """
-        if not os.path.exists(output_dir):
-            return None
-
-        video_name = os.path.basename(video_path)
-        name_no_ext = os.path.splitext(video_name)[0]
-
-        # 尝试.srt格式（最常见）
-        srt_file = os.path.join(output_dir, name_no_ext + ".srt")
-        if os.path.isfile(srt_file):
-            return srt_file
-
-        # 尝试其他字幕格式
-        subtitle_extensions = ['.ass', '.ssa', '.sub', '.vtt']
-        for ext in subtitle_extensions:
-            subtitle_file = os.path.join(output_dir, name_no_ext + ext)
-            if os.path.isfile(subtitle_file):
-                return subtitle_file
-
+        if os.path.isfile(final_srt_path):
+            return final_srt_path
         return None
 
 

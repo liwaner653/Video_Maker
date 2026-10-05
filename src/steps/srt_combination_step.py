@@ -275,15 +275,13 @@ class SrtCombinationStep(BaseStep):
         """
         task = context.task
 
-        # 构建输出路径
-        output_srt_path = os.path.join(
-            context.subtitle_dir,
-            f"{os.path.splitext(os.path.basename(task.video_path))[0]}_combined.srt"
-        )
+        # 最终字幕产物的canonical路径
+        output_srt_path = context.final_srt_path
 
-        # 如果check_exist为True，检查已合并的字幕文件是否存在，存在则直接复用
-        if task.subtitle and task.subtitle.check_exist and os.path.exists(context.srt_path):
-            print(f"⏭️ 跳过字幕合并（check_exist=true，文件已存在）: {context.srt_path}")
+        # 如果check_exist为True，检查最终产物是否存在，存在则直接复用
+        if task.subtitle and task.subtitle.check_exist and os.path.exists(output_srt_path):
+            context.srt_path = output_srt_path
+            print(f"⏭️ 跳过字幕合并（check_exist=true，文件已存在）: {output_srt_path}")
             return True
 
         # 收集所有片段的字幕路径（生成字幕场景）
@@ -302,12 +300,17 @@ class SrtCombinationStep(BaseStep):
             # 有剪辑片段且至少一个片段需要字幕 → 调整时间轴
             if context.trim_segments and any(seg.srt for seg in context.trim_segments):
                 print("📝 调整提取字幕的时间轴...")
-                success = adjust_extracted_srt(context.srt_path, context.trim_segments, output_srt_path)
+                # 先写入临时文件，成功后再原子替换为最终产物，避免失败残留污染后续check_exist
+                tmp_srt_path = output_srt_path + ".tmp"
+                success = adjust_extracted_srt(context.srt_path, context.trim_segments, tmp_srt_path)
+                if success:
+                    os.replace(tmp_srt_path, output_srt_path)
+                elif os.path.exists(tmp_srt_path):
+                    os.remove(tmp_srt_path)
             else:
-                # 没有片段或没有需要字幕的片段 → 直接使用原字幕
+                # 没有片段或没有需要字幕的片段 → 提取文件已是canonical路径，直接使用
                 print("📝 使用原始提取字幕，无需调整时间轴")
                 success = True
-                output_srt_path = context.srt_path
         
         # 分支2：处理生成字幕（片段的 srt_path 不为空）
         elif srt_paths:

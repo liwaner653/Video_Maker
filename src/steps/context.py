@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -45,9 +46,15 @@ class TaskContext:
     srt_stream_index: int = -1  # SRT字幕轨道索引，-1表示未设置
 
     trim_segments: List[TrimSegment] = field(default_factory=list)
-    
+
     status: bool = True
     error_msg: str = ""
+
+    @property
+    def final_srt_path(self) -> str:
+        """最终字幕产物的canonical路径：{subtitle_dir}/{视频名}.srt"""
+        video_basename = os.path.splitext(os.path.basename(self.task.video_path))[0]
+        return os.path.join(self.subtitle_dir, f"{video_basename}.srt")
 
 
 @dataclass

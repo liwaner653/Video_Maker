@@ -221,6 +221,12 @@ class ExtractSubtitlesStep(BaseStep):
             context.srt_stream_index = -1
             return True
         
+        # 如果check_exist为True，检查最终字幕产物是否已存在，存在则直接复用
+        if task.subtitle.check_exist and os.path.isfile(context.final_srt_path):
+            context.srt_path = context.final_srt_path
+            print(f"⏭️ 跳过字幕提取（check_exist=true，文件已存在）: {context.srt_path}")
+            return True
+        
         # 使用字幕语言作为过滤条件
         target_langs = LANG_MAP.get(task.subtitle.subtitle_lang.lower(), [task.subtitle.subtitle_lang.lower()])
         subtitle_lang = target_langs[1]
@@ -245,7 +251,9 @@ class ExtractSubtitlesStep(BaseStep):
             )
             
             if extracted_files:
-                context.srt_path = extracted_files[0]
+                # 重命名为最终字幕产物的canonical路径（extract_mkv_subtitles的_track命名保留给trim_video复用）
+                os.replace(extracted_files[0], context.final_srt_path)
+                context.srt_path = context.final_srt_path
                 print(f"✅ 字幕提取成功：{context.srt_path}")
             else:
                 context.srt_path = ""
