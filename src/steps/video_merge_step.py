@@ -24,13 +24,13 @@ def merge_video_audio_subtitle(
         return None
 
     os.makedirs(output_dir, exist_ok=True)
-    final_output_path = os.path.join(output_dir, f"{base_name}.mp4").replace('\\', '/')
+    final_output_path = os.path.join(output_dir, f"{base_name}.mkv").replace('\\', '/')
 
     has_srt = srt_path and os.path.exists(srt_path)
     has_additional_video = additional_video_path and os.path.exists(additional_video_path)
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        first_merge_path = os.path.join(temp_dir, "first_merge.mp4").replace('\\', '/')
+        first_merge_path = os.path.join(temp_dir, "first_merge.mkv").replace('\\', '/')
 
         command = [
             'ffmpeg', '-y',
@@ -108,7 +108,7 @@ class VideoMergeStep(BaseStep):
     def execute(self, context: TaskContext) -> bool:
         if context.task.final_video.check_exist:
             base_name = os.path.splitext(os.path.basename(context.task.video_path))[0]
-            expected_path = os.path.join(context.final_video_dir, f"{base_name}.mp4")
+            expected_path = os.path.join(context.final_video_dir, f"{base_name}.mkv")
             if os.path.exists(expected_path):
                 print(f"⏭️ 跳过音视频合并（check_exist=true，文件已存在）: {expected_path}")
                 context.final_video_path = expected_path.replace('\\', '/')
