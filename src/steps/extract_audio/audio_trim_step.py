@@ -60,20 +60,31 @@ class AudioTrimStep(BaseStep):
     def _trim_audio_by_segments(self, audio_path: str, segments: list, output_dir: str) -> str | None:
         """根据多个片段裁剪并合并音频"""
         import tempfile
-        
+
         os.makedirs(output_dir, exist_ok=True)
-        
-        base_name = os.path.splitext(os.path.basename(audio_path))[0]
+
         ext = os.path.splitext(audio_path)[1]
-        output_path = os.path.join(output_dir, f"{base_name}_trimmed{ext}")
-        
-        if len(segments) == 1:
-            segment = segments[0]
-            adjusted_start = segment.start_time - segment.offset
-            adjusted_end = segment.end_time - segment.offset
-            return self._trim_single_segment(audio_path, adjusted_start, adjusted_end, output_path)
-        else:
-            return self._trim_and_concatenate(audio_path, segments, output_path)
+
+        # 修剪产物先写入临时文件，成功后覆盖原音频并保持原文件名（视频同名），
+        # 避免下游视频合成继承到带_trimmed的文件名
+        fd, tmp_path = tempfile.mkstemp(suffix=ext, dir=output_dir)
+        os.close(fd)
+        try:
+            if len(segments) == 1:
+                segment = segments[0]
+                adjusted_start = segment.start_time - segment.offset
+                adjusted_end = segment.end_time - segment.offset
+                result = self._trim_single_segment(audio_path, adjusted_start, adjusted_end, tmp_path)
+            else:
+                result = self._trim_and_concatenate(audio_path, segments, tmp_path)
+
+            if result:
+                os.replace(tmp_path, audio_path)
+                return audio_path
+            return None
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
     def _trim_single_segment(self, audio_path: str, start_time: float, end_time: float, output_path: str) -> str | None:
         """修剪单个片段"""
