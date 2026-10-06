@@ -188,7 +188,8 @@ def combine_segment_srt(segments: List[TrimSegment], output_path: str) -> bool:
     1. 依次读取每个片段的字幕文件
     2. 将字幕时间依次偏移，保证时间轴连续
     3. 合并所有字幕块并写入输出文件
-    4. 删除用于合并的源srt文件，只保留合并后的文件
+    
+    注意：本函数只负责合并，源字幕文件的删除由调用方在产物校验通过后执行。
     
     Args:
         segments: 剪辑片段列表（包含字幕路径信息）
@@ -199,14 +200,11 @@ def combine_segment_srt(segments: List[TrimSegment], output_path: str) -> bool:
     """
     combined_blocks = []
     offset = timedelta(seconds=0)  # 时间偏移量，初始为0
-    source_srt_paths = []  # 记录用于合并的源srt文件路径
     
     for seg in segments:
         segment_duration = timedelta(seconds=seg.end_time - seg.start_time)
         
         if seg.srt and seg.srt_path and os.path.exists(seg.srt_path):
-            source_srt_paths.append(seg.srt_path)
-            
             with open(seg.srt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
@@ -224,14 +222,6 @@ def combine_segment_srt(segments: List[TrimSegment], output_path: str) -> bool:
     
     if combined_blocks:
         write_srt_blocks(combined_blocks, output_path)
-        
-        for srt_path in source_srt_paths:
-            try:
-                os.remove(srt_path)
-                print(f"🗑️ 删除源字幕文件: {srt_path}")
-            except Exception as e:
-                print(f"⚠️ 删除源字幕文件失败 {srt_path}: {e}")
-        
         return True
     return False
 
@@ -261,11 +251,12 @@ class SrtCombinationStep(BaseStep):
     
     def execute(self, context: TaskContext) -> bool:
         """
-        执行字幕合并与时间轴调整
+        将字幕归一化到最终产物 context.final_srt_path
         
-        支持两种字幕来源：
-        1. 提取字幕：通过 context.srt_path 传入，需要根据剪辑片段调整时间轴
-        2. 生成字幕：每个片段自己的 srt_path，需要合并为完整字幕
+        进入本步骤时字幕有三种互斥的来源形态：
+        1. 逐片段生成的字幕（各 seg.srt_path 非空）→ 合并为最终产物
+        2. 从视频提取的字幕（srt_stream_index>=0）且有剪辑片段 → 调整时间轴
+        3. 字幕已是最终产物（提取后无需调整 / 完整音频whisper）→ 直通
         
         Args:
             context: 任务上下文，包含剪辑片段列表和字幕路径信息
@@ -274,56 +265,64 @@ class SrtCombinationStep(BaseStep):
             始终返回True（失败时会清空context.srt_path）
         """
         task = context.task
-
-        # 最终字幕产物的canonical路径
         output_srt_path = context.final_srt_path
 
-        # 如果check_exist为True，检查最终产物是否存在，存在则直接复用
+        # check_exist：最终产物已存在则直接复用
         if task.subtitle and task.subtitle.check_exist and os.path.exists(output_srt_path):
             context.srt_path = output_srt_path
             print(f"⏭️ 跳过字幕合并（check_exist=true，文件已存在）: {output_srt_path}")
             return True
 
-        # 收集所有片段的字幕路径（生成字幕场景）
-        srt_paths = [seg.srt_path for seg in context.trim_segments if seg.srt and seg.srt_path]
-        
-        # 场景1：没有任何字幕源
-        if not context.srt_path and not srt_paths:
+        # 逐片段生成字幕的源文件列表（whisper场景）
+        segment_srt_paths = [
+            seg.srt_path for seg in context.trim_segments
+            if seg.srt and seg.srt_path
+        ]
+
+        # 没有任何字幕源
+        if not context.srt_path and not segment_srt_paths:
             print("⚠️ 没有可处理的字幕文件")
             context.srt_path = ""
             return True
-        
+
         success = False
-        
-        # 分支1：处理提取字幕（context.srt_path 不为空）
-        if context.srt_stream_index >= 0 and os.path.exists(context.srt_path):
-            # 有剪辑片段且至少一个片段需要字幕 → 调整时间轴
-            if context.trim_segments and any(seg.srt for seg in context.trim_segments):
-                print("📝 调整提取字幕的时间轴...")
-                # 先写入临时文件，成功后再原子替换为最终产物，避免失败残留污染后续check_exist
-                tmp_srt_path = output_srt_path + ".tmp"
-                success = adjust_extracted_srt(context.srt_path, context.trim_segments, tmp_srt_path)
-                if success:
-                    os.replace(tmp_srt_path, output_srt_path)
-                elif os.path.exists(tmp_srt_path):
-                    os.remove(tmp_srt_path)
-            else:
-                # 没有片段或没有需要字幕的片段 → 提取文件已是canonical路径，直接使用
-                print("📝 使用原始提取字幕，无需调整时间轴")
-                success = True
-        
-        # 分支2：处理生成字幕（片段的 srt_path 不为空）
-        elif srt_paths:
-                success = combine_segment_srt(context.trim_segments, output_srt_path)
-        
-        # 处理结果
+
+        if segment_srt_paths:
+            # 形态1：片段字幕 → 合并
+            success = combine_segment_srt(context.trim_segments, output_srt_path)
+        elif context.srt_stream_index >= 0 and any(seg.srt for seg in context.trim_segments):
+            # 形态2：提取字幕 + 有剪辑片段 → 调整时间轴（临时文件原子替换，避免残留污染）
+            print("📝 调整提取字幕的时间轴...")
+            tmp_srt_path = output_srt_path + ".tmp"
+            success = adjust_extracted_srt(context.srt_path, context.trim_segments, tmp_srt_path)
+            if success:
+                os.replace(tmp_srt_path, output_srt_path)
+            elif os.path.exists(tmp_srt_path):
+                os.remove(tmp_srt_path)
+        elif os.path.abspath(context.srt_path) == os.path.abspath(output_srt_path):
+            # 形态3：字幕已是最终产物（提取无需调整 / 完整音频whisper）→ 直通
+            print("📝 字幕已是最终产物，无需调整时间轴")
+            success = True
+
+        # 结果校验
         if success and os.path.exists(output_srt_path):
             file_size = os.path.getsize(output_srt_path)
             print(f"📊 字幕文件大小: {file_size / 1024:.2f} KB")
-            
+
             # 检查字幕文件大小是否达标（调试模式跳过检查）
             if self.debug or file_size >= MIN_SRT_FILE_SIZE_BYTES:
                 context.srt_path = output_srt_path
+
+                # 合并产物校验通过后，删除combine前的片段源字幕（最终产物自身除外）
+                output_abs = os.path.abspath(output_srt_path)
+                for src_path in segment_srt_paths:
+                    if os.path.exists(src_path) and os.path.abspath(src_path) != output_abs:
+                        try:
+                            os.remove(src_path)
+                            print(f"🗑️ 删除源字幕文件: {src_path}")
+                        except Exception as e:
+                            print(f"⚠️ 删除源字幕文件失败 {src_path}: {e}")
+
                 if self.debug:
                     print(f"✅ 调试模式：跳过文件大小检查，字幕处理完成: {context.srt_path}")
                 else:
@@ -334,5 +333,5 @@ class SrtCombinationStep(BaseStep):
         else:
             context.srt_path = ""
             print("⚠️ 字幕处理失败，将跳过字幕合成")
-        
+
         return True
