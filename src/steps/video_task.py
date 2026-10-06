@@ -42,7 +42,7 @@ class VideoPart:
 class FinalVideo:
     """最终视频配置"""
     check_exist: bool = False  # 如果为true，则跳过video_compose_step步骤；为false，则覆盖文件
-    additional_video_path: str = "D:\\waner\\4_ani\\output.mp4"  # 额外mp4文件路径，为空则不合并
+    additional_video_path: str = "C:\\Users\\12864\\Desktop\\2\\1.mkv"  # 额外mkv文件路径，为空则不合并
 
 @dataclass
 class VideoTask:

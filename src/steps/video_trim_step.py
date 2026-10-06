@@ -22,7 +22,7 @@ def trim_video_segments(context: TaskContext) -> str | None:
     os.makedirs(output_dir, exist_ok=True)
 
     base_name = os.path.splitext(os.path.basename(video_path))[0]
-    trimmed_video_path = os.path.join(output_dir, f"{base_name}_trimmed.mp4").replace('\\', '/')
+    trimmed_video_path = os.path.join(output_dir, f"{base_name}_trimmed.mkv").replace('\\', '/')
 
     if len(audio_segments) == 1:
         seg = audio_segments[0]
@@ -53,7 +53,7 @@ def trim_video_segments(context: TaskContext) -> str | None:
             concat_list_path = os.path.join(temp_dir, 'segments.txt').replace('\\', '/')
 
             for i, seg in enumerate(audio_segments):
-                segment_path = os.path.join(temp_dir, f"segment_{i}.mp4").replace('\\', '/')
+                segment_path = os.path.join(temp_dir, f"segment_{i}.mkv").replace('\\', '/')
                 command = [
                     'ffmpeg', '-y',
                     '-ss', str(seg.start_time),
@@ -109,7 +109,7 @@ class VideoTrimStep(BaseStep):
     def execute(self, context: TaskContext) -> bool:
         if context.task.final_video.check_exist:
             base_name = os.path.splitext(os.path.basename(context.task.video_path))[0]
-            expected_path = os.path.join(context.final_video_dir, f"{base_name}_trimmed.mp4")
+            expected_path = os.path.join(context.final_video_dir, f"{base_name}_trimmed.mkv")
             if os.path.exists(expected_path):
                 print(f"⏭️ 跳过视频裁剪（check_exist=true，文件已存在）: {expected_path}")
                 context.trimmed_video_path = expected_path.replace('\\', '/')

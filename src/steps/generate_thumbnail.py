@@ -221,8 +221,8 @@ if __name__ == "__main__":
         print("  单帧缩略图：python generate_image.py <视频文件路径> <输出目录> [分辨率] [质量]")
         print("  16宫格缩略图：python generate_image.py <视频文件路径> <输出目录> [分辨率] [质量] --16grid")
         print("示例：")
-        print("  python generate_image.py ./test.mp4 ./thumbnails 320:180 2")
-        print("  python generate_image.py ./test.mp4 ./thumbnails 480:270 1 --16grid")
+        print("  python generate_image.py ./test.mkv ./thumbnails 320:180 2")
+        print("  python generate_image.py ./test.mkv ./thumbnails 480:270 1 --16grid")
         sys.exit(1)
     
     # 解析命令行参数
