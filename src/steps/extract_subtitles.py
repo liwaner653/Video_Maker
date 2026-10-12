@@ -4,8 +4,9 @@ import json
 import os
 from steps.base_step import BaseStep
 from steps.config import VIDEO_EXTENSIONS, LANG_MAP
+from steps.util import normalize_subtitle_lang
 from steps.context import TaskContext
-from steps.subtitle.subtitle_handler import (
+from steps.subtitle_handler import (
     SubtitleHandlerFactory,
     CodecToFormatMapper,
     SubtitleHandler
@@ -227,8 +228,9 @@ class ExtractSubtitlesStep(BaseStep):
             print(f"⏭️ 跳过字幕提取（check_exist=true，文件已存在）: {context.srt_path}")
             return True
         
-        # 使用字幕语言作为过滤条件
-        target_langs = LANG_MAP.get(task.subtitle.subtitle_lang.lower(), [task.subtitle.subtitle_lang.lower()])
+        # 使用字幕语言作为过滤条件（und 等不支持的语言归一化为默认语言）
+        normalized_lang = normalize_subtitle_lang(task.subtitle.subtitle_lang)
+        target_langs = LANG_MAP.get(normalized_lang.lower(), [normalized_lang.lower()])
         subtitle_lang = target_langs[1]
         target_titles = task.subtitle.target_titles
         

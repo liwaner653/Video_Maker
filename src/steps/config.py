@@ -22,3 +22,8 @@ LANG_MAP = {
     'ru': ['russian', 'rus', 'ru'],
     'pt': ['portuguese', 'por', 'pt'],
 }
+
+# 不支持/未定义语言的回退映射（und = 未定义语言，whisper 不支持）
+LANG_FALLBACK_MAP = {
+    'und': 'en',
+}

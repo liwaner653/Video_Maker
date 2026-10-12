@@ -4,6 +4,7 @@ import shutil
 from typing import Optional
 
 from steps.base_step import BaseStep
+from steps.util import normalize_subtitle_lang
 from steps.context import TaskContext
 
 
@@ -223,7 +224,10 @@ def generate_subtitles(audio_path: str, output_dir: str, model: str = "turbo", s
     if not os.path.exists(audio_path):
         print(f"错误：音频文件不存在 {audio_path}")
         return None
-    
+
+    # 归一化不支持的语言代码（如 und → en），避免 whisper 报错
+    subtitle_lang = normalize_subtitle_lang(subtitle_lang)
+
     os.makedirs(output_dir, exist_ok=True)
     
     # 生成字幕文件名

@@ -1,6 +1,13 @@
 import subprocess
 import json
 
+from steps.config import LANG_FALLBACK_MAP
+
+
+def normalize_subtitle_lang(subtitle_lang: str) -> str:
+    """将不支持的语言代码归一化为默认语言（如 und → en）"""
+    return LANG_FALLBACK_MAP.get((subtitle_lang or "").lower(), subtitle_lang)
+
 
 def get_video_duration(video_path: str) -> float:
     """使用 ffprobe 获取视频总时长（秒）"""

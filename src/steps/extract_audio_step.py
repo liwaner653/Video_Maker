@@ -8,6 +8,7 @@ from .base_step import BaseStep
 from .context import TaskContext
 from .extract_audio.audio_codec import AudioExtractor
 from steps.config import LANG_MAP
+from steps.util import normalize_subtitle_lang
 
 
 
@@ -36,7 +37,7 @@ class AudioStep(BaseStep):
         audio_stream_index = task.audio.audio_stream_index if task.audio else 0
         audio_stream_index = find_audio_stream_by_language(
             task.video_path, 
-            task.subtitle.subtitle_lang if task.subtitle else "de"
+            task.subtitle.subtitle_lang if task.subtitle else "en"
         )
         
         if audio_stream_index < 0:
