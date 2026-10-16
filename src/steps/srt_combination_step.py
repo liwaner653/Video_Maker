@@ -285,53 +285,78 @@ class SrtCombinationStep(BaseStep):
             context.srt_path = ""
             return True
 
-        success = False
+        # 按来源形态归一化字幕，产出最终产物
+        success = self._normalize_subtitle(context, output_srt_path, segment_srt_paths)
 
+        # 结果校验：失败则清空字幕路径
+        if not success or not os.path.exists(output_srt_path):
+            context.srt_path = ""
+            print("⚠️ 字幕处理失败，将跳过字幕合成")
+            return True
+
+        self._finalize_subtitle(context, output_srt_path)
+        return True
+
+    def _normalize_subtitle(self, context: TaskContext, output_srt_path: str,
+                            segment_srt_paths: List[str]) -> bool:
+        """按字幕来源形态产出最终字幕，返回是否成功"""
         if segment_srt_paths:
             # 形态1：片段字幕 → 合并
             success = combine_segment_srt(context.trim_segments, output_srt_path)
-        elif context.srt_stream_index >= 0 and any(seg.srt for seg in context.trim_segments):
-            # 形态2：提取字幕 + 有剪辑片段 → 调整时间轴（临时文件原子替换，避免残留污染）
-            print("📝 调整提取字幕的时间轴...")
-            tmp_srt_path = output_srt_path + ".tmp"
-            success = adjust_extracted_srt(context.srt_path, context.trim_segments, tmp_srt_path)
             if success:
-                os.replace(tmp_srt_path, output_srt_path)
-            elif os.path.exists(tmp_srt_path):
-                os.remove(tmp_srt_path)
-        elif os.path.abspath(context.srt_path) == os.path.abspath(output_srt_path):
+                self._cleanup_intermediate_srt(context, output_srt_path)
+            return success
+
+        if context.srt_stream_index >= 0 and any(seg.srt for seg in context.trim_segments):
+            # 形态2：提取字幕 + 有剪辑片段 → 调整时间轴
+            print("📝 调整提取字幕的时间轴...")
+            return self._adjust_extracted_subtitle(context, output_srt_path)
+
+        if os.path.abspath(context.srt_path) == os.path.abspath(output_srt_path):
             # 形态3：字幕已是最终产物（提取无需调整 / 完整音频whisper）→ 直通
             print("📝 字幕已是最终产物，无需调整时间轴")
-            success = True
+            return True
 
-        # 结果校验
-        if success and os.path.exists(output_srt_path):
-            file_size = os.path.getsize(output_srt_path)
-            print(f"📊 字幕文件大小: {file_size / 1024:.2f} KB")
+        return False
 
-            # 检查字幕文件大小是否达标（调试模式跳过检查）
-            if self.debug or file_size >= MIN_SRT_FILE_SIZE_BYTES:
-                context.srt_path = output_srt_path
+    def _adjust_extracted_subtitle(self, context: TaskContext, output_srt_path: str) -> bool:
+        """调整提取字幕的时间轴，成功后原子替换为最终产物（避免失败残留污染）"""
+        tmp_srt_path = output_srt_path + ".tmp"
+        success = adjust_extracted_srt(context.srt_path, context.trim_segments, tmp_srt_path)
+        if success:
+            os.replace(tmp_srt_path, output_srt_path)
+        elif os.path.exists(tmp_srt_path):
+            os.remove(tmp_srt_path)
+        return success
 
-                # 合并产物校验通过后，删除combine前的片段源字幕（最终产物自身除外）
-                output_abs = os.path.abspath(output_srt_path)
-                for src_path in segment_srt_paths:
-                    if os.path.exists(src_path) and os.path.abspath(src_path) != output_abs:
-                        try:
-                            os.remove(src_path)
-                            print(f"🗑️ 删除源字幕文件: {src_path}")
-                        except Exception as e:
-                            print(f"⚠️ 删除源字幕文件失败 {src_path}: {e}")
+    def _cleanup_intermediate_srt(self, context: TaskContext, output_srt_path: str) -> None:
+        """合并完成后遍历各片段，删除中间字幕文件，只保留合并结果"""
+        output_abs = os.path.abspath(output_srt_path)
+        for seg in context.trim_segments:
+            src_path = seg.srt_path
+            if not src_path or os.path.abspath(src_path) == output_abs:
+                continue
+            if not os.path.exists(src_path):
+                continue
+            try:
+                os.remove(src_path)
+                print(f"🗑️ 删除中间字幕文件: {src_path}")
+            except Exception as e:
+                print(f"⚠️ 删除中间字幕文件失败 {src_path}: {e}")
 
-                if self.debug:
-                    print(f"✅ 调试模式：跳过文件大小检查，字幕处理完成: {context.srt_path}")
-                else:
-                    print(f"✅ 字幕处理完成: {context.srt_path}")
-            else:
-                context.srt_path = ""
-                print(f"⚠️ 字幕文件小于 {MIN_SRT_FILE_SIZE_KB}KB，将跳过字幕合成")
-        else:
+    def _finalize_subtitle(self, context: TaskContext, output_srt_path: str) -> None:
+        """校验最终字幕大小并写入 context.srt_path"""
+        file_size = os.path.getsize(output_srt_path)
+        print(f"📊 字幕文件大小: {file_size / 1024:.2f} KB")
+
+        # 非调试模式下文件过小 → 跳过字幕合成（调试模式跳过检查）
+        if not self.debug and file_size < MIN_SRT_FILE_SIZE_BYTES:
             context.srt_path = ""
-            print("⚠️ 字幕处理失败，将跳过字幕合成")
+            print(f"⚠️ 字幕文件小于 {MIN_SRT_FILE_SIZE_KB}KB，将跳过字幕合成")
+            return
 
-        return True
+        context.srt_path = output_srt_path
+        if self.debug:
+            print(f"✅ 调试模式：跳过文件大小检查，字幕处理完成: {context.srt_path}")
+        else:
+            print(f"✅ 字幕处理完成: {context.srt_path}")
