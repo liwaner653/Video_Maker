@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from steps.extract_subtitles import get_target_subtitle_indices, extract_mkv_subtitles
 from steps.extract_audio_step import find_audio_stream_by_language
-from steps.subtitle.subtitle_handler import SubtitleHandlerFactory
+from steps.subtitle_handler import SubtitleHandlerFactory
 from trim_video.trim_video_task import TrimVideoTask, TrimSegment, TrimAudioConfig, TrimSubtitleConfig
 
 

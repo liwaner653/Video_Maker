@@ -12,7 +12,7 @@ from steps.extract_audio.audio_trim_step import AudioTrimStep
 from steps.extract_subtitles import ExtractSubtitlesStep
 from steps.input_parser import ParseJsonStep
 from steps.prepare_dir_step import PrepareDirStep
-from steps.subtitle.generate_subtitles_step import GenerateSubtitlesStep
+from steps.generate_subtitles_step import GenerateSubtitlesStep
 from steps.calc_trim_segments import TrimSegmentsStep
 from steps.srt_combination_step import SrtCombinationStep
 from steps import config

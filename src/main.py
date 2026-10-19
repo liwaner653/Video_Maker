@@ -14,7 +14,7 @@ from steps.generate_thumbnail import ThumbnailStep
 from steps.extract_subtitles import ExtractSubtitlesStep
 from steps.input_parser import ParseJsonStep
 from steps.prepare_dir_step import PrepareDirStep
-from steps.subtitle.generate_subtitles_step import GenerateSubtitlesStep
+from steps.generate_subtitles_step import GenerateSubtitlesStep
 from steps.calc_trim_segments import TrimSegmentsStep
 from steps.srt_combination_step import SrtCombinationStep
 from steps import config
@@ -56,4 +56,4 @@ def main(json_path):
         PostProcessingStep().run(batch_ctx)
 
 if __name__ == "__main__":
-    main(r"D:\sysu\10_myself\8_projects\Video_Maker\test\16h_srt\json.json")
+    main(r"D:\waner\4_ani\json.json")

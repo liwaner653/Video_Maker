@@ -30,7 +30,7 @@ class PostProcessingStep(BaseStep):
         print("\n[1/2] 清理临时文件夹...")
         dirs_to_delete = set()
         for ctx in context.task_contexts:
-            if ctx.thumb_dir: dirs_to_delete.add(ctx.thumb_dir)
+            #if ctx.thumb_dir: dirs_to_delete.add(ctx.thumb_dir)
             if ctx.audio_dir: dirs_to_delete.add(ctx.audio_dir)
             
         for path in dirs_to_delete:
