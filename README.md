@@ -3,10 +3,9 @@ Generate 16-grid thumbnail. Extract audio from the video. Then use Whisper to ge
 
 # How to run
 
-1. Run input_parser.py and input the folder path, a **json.json** generated in the same folder.
+1. Run generate_json.py and input the folder path, a **json.json** generated in the same folder.
 ```
-python input_parser.py
+python src/test/generate_json.py
 ```
 
-2. Modify the **JSON_PATH** in main.py and then run(F5) main.py
-> If use ``python generate_subtitles.py``, it will return some error, but it's ok when I click **F5** in VSCode.
+2. Modify the **JSON_PATH** in main.py and then run it
