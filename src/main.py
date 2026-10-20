@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 # main.py
 import sys
-import argparse
 
 from steps.post_processing_step import PostProcessingStep
 from steps.context import BatchContext
 from steps.pic_video_merge_step import PicVideoMergeStep
-from steps.video_trim_step import VideoTrimStep
-from steps.video_merge_step import VideoMergeStep
 from steps.extract_audio_step import AudioStep
 from steps.extract_audio.audio_trim_step import AudioTrimStep
 from steps.generate_thumbnail import ThumbnailStep
