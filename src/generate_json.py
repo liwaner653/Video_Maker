@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'steps'))
 from steps.util import get_video_chapters
 from steps.config import VIDEO_EXTENSIONS
 
@@ -136,8 +135,8 @@ def generate_video_json(folder_path: str, output_json_path: str, video_parts: li
 if __name__ == "__main__":
     input_dir = input("请输入视频文件所在目录路径: ").strip()
     generate_video_json(input_dir, os.path.join(input_dir, "json.json"), 
-                        default_sub_lang='en'
+                        default_sub_lang='de'
                         #, default_blur_sigma=5.0
-                        #, auto_detect_chapters=True
+                        , auto_detect_chapters=True
                         #, video_parts=[{"cut_front_seconds": 6},]
                         )
