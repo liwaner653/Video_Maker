@@ -2,8 +2,8 @@ import json
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'steps'))
-from util import get_video_chapters
-from config import VIDEO_EXTENSIONS
+from steps.util import get_video_chapters
+from steps.config import VIDEO_EXTENSIONS
 
 
 def create_video_parts_from_chapters(video_path: str) -> list:
@@ -19,7 +19,7 @@ def create_video_parts_from_chapters(video_path: str) -> list:
         video_parts 配置列表
     """
     # 定义关键词（不区分大小写）
-    skip_srt_keywords = ['op', 'opening', 'ed', 'ending']
+    skip_srt_keywords = ['op', 'opening', 'ed', 'ending', 'credits start', 'intro', 'credits']
     
     chapters = get_video_chapters(video_path)
     if not chapters:
@@ -78,7 +78,7 @@ def generate_video_json(folder_path: str, output_json_path: str, video_parts: li
         default_target_titles: 默认字幕标题关键字过滤列表，默认 ['cc', 'sdh', 'Dub']
     """
     if default_target_titles is None:
-        default_target_titles = ['cc', 'sdh', 'Dub']
+        default_target_titles = ['cc', 'sdh', 'Dubtitle']
     if not os.path.isdir(folder_path):
         raise ValueError(f"文件夹不存在：{folder_path}")
     
@@ -139,4 +139,5 @@ if __name__ == "__main__":
                         default_sub_lang='en'
                         #, default_blur_sigma=5.0
                         #, auto_detect_chapters=True
+                        #, video_parts=[{"cut_front_seconds": 6},]
                         )
