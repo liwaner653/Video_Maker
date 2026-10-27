@@ -150,7 +150,10 @@ class InputParser:
             if 'final_video' in item:
                 fv_data = item['final_video']
                 check_exist = bool(fv_data.get('check_exist', False))
-                final_video = FinalVideo(check_exist=check_exist)
+                additional_video_path = fv_data.get('additional_video_path', "").strip()
+                if additional_video_path and not os.path.isfile(additional_video_path):
+                    raise ValueError(f"JSON第{idx+1}项final_video对象指定的额外视频不存在：{additional_video_path}")
+                final_video = FinalVideo(check_exist=check_exist, additional_video_path=additional_video_path)
             
             # 添加到任务列表
             self.video_tasks.append(
