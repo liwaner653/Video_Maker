@@ -36,6 +36,7 @@ class TaskContext:
     audio_dir: str = ""
     subtitle_dir: str = ""
     final_video_dir: str = ""
+    trimmed_video_dir: str = ""  # 中间文件夹：存放裁剪后的中间视频
 
     thumb_path: str = ""
     audio_path: str = ""

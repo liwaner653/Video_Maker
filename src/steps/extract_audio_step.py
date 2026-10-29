@@ -8,7 +8,6 @@ from .base_step import BaseStep
 from .context import TaskContext
 from .extract_audio.audio_codec import AudioExtractor
 from steps.config import LANG_MAP
-from steps.util import normalize_subtitle_lang
 
 
 
@@ -18,9 +17,12 @@ class AudioStep(BaseStep):
     @property
     def step_name(self): return "音频提取"
 
-    def __init__(self):
+    def __init__(self, unify_aac: bool = False):
         super().__init__()
         self.audio_extractor = AudioExtractor()
+        # video main 流水线要求音频统一为 AAC 48kHz 立体声（保证合并/拼接兼容）；
+        # main 流水线只做简单提取，保持默认 False（纯流拷贝）
+        self.unify_aac = unify_aac
 
     def execute(self, context: TaskContext) -> bool:
         task = context.task
@@ -50,12 +52,63 @@ class AudioStep(BaseStep):
             context.audio_dir,
             audio_stream_index
         )
-        
+
+        if audio_path and self.unify_aac:
+            audio_path = self._ensure_aac(audio_path)
+
         if audio_path:
             context.audio_path = audio_path
             return True
         context.error_msg = "音频提取失败"
         return False
+
+    def _ensure_aac(self, audio_path: str) -> Optional[str]:
+        """确保音频为 AAC 48kHz 立体声 .m4a；不满足则转码，已是AAC则仅流拷贝换封装"""
+        probe_cmd = [
+            "ffprobe", "-v", "error", "-select_streams", "a:0",
+            "-show_entries", "stream=codec_name,sample_rate,channels",
+            "-of", "json", audio_path
+        ]
+        try:
+            result = subprocess.run(probe_cmd, capture_output=True, text=True, check=True)
+            stream = json.loads(result.stdout)['streams'][0]
+        except Exception as e:
+            print(f"❌ 读取音频参数失败: {e}")
+            return None
+
+        root, ext = os.path.splitext(audio_path)
+        target_path = root + '.m4a'
+        is_aac_48k_stereo = (
+            stream.get('codec_name') == 'aac'
+            and int(stream.get('sample_rate', 0)) == 48000
+            and stream.get('channels') == 2
+        )
+        if is_aac_48k_stereo and ext.lower() == '.m4a':
+            return audio_path
+
+        temp_path = root + '_aac_tmp.m4a'
+        command = ['ffmpeg', '-y', '-i', audio_path, '-vn']
+        if is_aac_48k_stereo:
+            command.extend(['-acodec', 'copy'])  # 已是AAC，仅换封装
+        else:
+            command.extend(['-acodec', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2'])
+        command.append(temp_path)
+
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)
+            os.replace(temp_path, target_path)
+            if os.path.normpath(target_path) != os.path.normpath(audio_path) and os.path.exists(audio_path):
+                os.remove(audio_path)
+            print(f"✅ 音频已统一为 AAC 48kHz 立体声: {target_path}")
+            return target_path
+        except subprocess.CalledProcessError as e:
+            print(f"❌ 音频转码AAC失败: {e.stderr}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return None
+        except OSError as e:
+            print(f"❌ 音频文件处理失败: {e}")
+            return None
     
     def _find_existing_audio(self, video_path: str, output_dir: str) -> Optional[str]:
         """
@@ -72,8 +125,12 @@ class AudioStep(BaseStep):
         video_name = os.path.basename(video_path)
         name_no_ext = os.path.splitext(video_name)[0]
         
-        # 尝试多种常见的音频扩展名
-        audio_extensions = ['.aac', '.ac3', '.eac3', '.mp3', '.flac', '.wav', '.m4a', '.opus']
+        if self.unify_aac:
+            # 仅匹配统一转码后的 AAC 文件，旧格式（eac3/ac3等）重新提取
+            audio_extensions = ['.m4a']
+        else:
+            # 尝试多种常见的音频扩展名
+            audio_extensions = ['.aac', '.ac3', '.eac3', '.mp3', '.flac', '.wav', '.m4a', '.opus']
         
         for ext in audio_extensions:
             audio_file = os.path.join(output_dir, name_no_ext + ext)

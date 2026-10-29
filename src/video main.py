@@ -27,7 +27,7 @@ def main(json_path):
         
     video_pipeline = [PrepareDirStep(), 
                       TrimSegmentsStep(),
-                      AudioStep(), 
+                      AudioStep(unify_aac=True),
                       ExtractSubtitlesStep(),
                       GenerateSubtitlesStep(), 
                       SrtCombinationStep(debug=config.DEBUG),

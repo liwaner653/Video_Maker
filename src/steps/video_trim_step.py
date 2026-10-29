@@ -18,7 +18,7 @@ def trim_video_segments(context: TaskContext) -> str | None:
         print("❌ 没有找到 audio=true 的分段")
         return None
 
-    output_dir = context.final_video_dir
+    output_dir = context.trimmed_video_dir
     os.makedirs(output_dir, exist_ok=True)
 
     base_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -109,7 +109,7 @@ class VideoTrimStep(BaseStep):
     def execute(self, context: TaskContext) -> bool:
         if context.task.final_video.check_exist:
             base_name = os.path.splitext(os.path.basename(context.task.video_path))[0]
-            expected_path = os.path.join(context.final_video_dir, f"{base_name}_trimmed.mkv")
+            expected_path = os.path.join(context.trimmed_video_dir, f"{base_name}_trimmed.mkv")
             if os.path.exists(expected_path):
                 print(f"⏭️ 跳过视频裁剪（check_exist=true，文件已存在）: {expected_path}")
                 context.trimmed_video_path = expected_path.replace('\\', '/')
