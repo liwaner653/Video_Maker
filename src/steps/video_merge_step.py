@@ -8,6 +8,37 @@ from .base_step import BaseStep
 from .context import TaskContext
 
 
+# 烧录字幕时必须重编码视频，这里用接近视觉无损的 CRF（越小画质越好、体积越大）
+BURN_CRF_H264 = 18  # x264 CRF 18 ≈ 视觉无损
+BURN_CRF_H265 = 24  # x265 的 CRF 比 x264 高约 6 时画质相当
+
+
+def _probe_video_codec(video_path: str) -> tuple[str, str]:
+    """读取视频流的编码名与像素格式"""
+    probe_command = [
+        'ffprobe', '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=codec_name,pix_fmt',
+        '-of', 'json', video_path
+    ]
+    try:
+        result = subprocess.run(probe_command, capture_output=True, text=True, check=True)
+        stream = json.loads(result.stdout)['streams'][0]
+        return stream.get('codec_name', 'h264'), stream.get('pix_fmt', 'yuv420p')
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, IndexError):
+        return 'h264', 'yuv420p'
+
+
+def _video_encode_args(video_path: str) -> list[str]:
+    """按源视频的编码类型选择编码器，保持同编码体系与像素位深，减少画质损失"""
+    codec, pix_fmt = _probe_video_codec(video_path)
+    if codec in ('hevc', 'h265'):
+        args = ['-c:v', 'libx265', '-preset', 'veryfast', '-crf', str(BURN_CRF_H265)]
+    else:
+        args = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', str(BURN_CRF_H264)]
+    return args + ['-pix_fmt', pix_fmt]
+
+
 def merge_video_audio_subtitle(
     trimmed_video_path: str,
     audio_path: str,
@@ -45,9 +76,13 @@ def merge_video_audio_subtitle(
     command.extend([
         '-map', '0:v:0',
         '-map', '1:a:0',
-        '-c:v', 'libx264',
-        '-preset', 'veryfast',
-        '-crf', '23',
+    ])
+    # 只有烧录字幕必须重编码；否则直接流拷贝，主视频零画质损失
+    if has_srt:
+        command.extend(_video_encode_args(trimmed_video_path))
+    else:
+        command.extend(['-c:v', 'copy'])
+    command.extend([
         # 音频在 AudioStep 已统一转为 AAC 48kHz 立体声，这里直接流拷贝
         '-c:a', 'copy',
         '-shortest',
@@ -149,6 +184,8 @@ def _normalize_additional_video(additional_path: str, main_params: dict) -> str 
     main_v = main_params['video']
     width, height = main_v['width'], main_v['height']
     fps = main_v['r_frame_rate']
+    codec = main_v.get('codec_name', 'h264')
+    pix_fmt = main_v.get('pix_fmt') or 'yuv420p'
 
     root, _ = os.path.splitext(additional_path)
     target_path = f"{root}.mkv"
@@ -158,11 +195,13 @@ def _normalize_additional_video(additional_path: str, main_params: dict) -> str 
     normalize_command.extend([
         '-vf', f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
                f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,fps={fps},setsar=1",
-        '-c:v', 'libx264',
-        '-preset', 'veryfast',
-        '-crf', '23',
-        '-pix_fmt', 'yuv420p',
     ])
+    # 与主视频保持相同编码体系与位深，否则 concat 流拷贝会失败
+    if codec in ('hevc', 'h265'):
+        normalize_command.extend(['-c:v', 'libx265', '-preset', 'veryfast', '-crf', str(BURN_CRF_H265)])
+    else:
+        normalize_command.extend(['-c:v', 'libx264', '-preset', 'veryfast', '-crf', str(BURN_CRF_H264)])
+    normalize_command.extend(['-pix_fmt', pix_fmt])
     if main_params['audio']:
         normalize_command.extend(['-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2'])
     else:
