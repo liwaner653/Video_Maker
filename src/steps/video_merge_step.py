@@ -29,75 +29,74 @@ def merge_video_audio_subtitle(
     has_srt = srt_path and os.path.exists(srt_path)
     has_additional_video = additional_video_path and os.path.exists(additional_video_path)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        first_merge_path = os.path.join(temp_dir, "first_merge.mkv").replace('\\', '/')
+    first_merge_path = os.path.join(output_dir, "first_merge.mkv").replace('\\', '/')
 
-        command = [
+    command = [
+        'ffmpeg', '-y',
+        '-i', trimmed_video_path,
+        '-i', audio_path
+    ]
+
+    if has_srt:
+        safe_srt_path = srt_path.replace('\\', '/').replace(':', r'\:').replace("'", "\\'")
+        command.extend(['-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei,FontSize=16'"])
+
+    command.extend([
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-crf', '23',
+        '-c:a', 'copy',
+        '-shortest',
+        first_merge_path
+    ])
+
+    print(f"📽️ 合并画面+音频{'+字幕' if has_srt else ''}...")
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+        if not os.path.exists(first_merge_path):
+            print("❌ 错误：第一次合并未生成输出文件")
+            return None
+        print("✅ 第一次合并完成")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ FFmpeg 第一次合并报错: {e.stderr}")
+        return None
+
+    if has_additional_video:
+        print(f"🔗 合并额外视频: {os.path.basename(additional_video_path)}")
+        concat_command = [
             'ffmpeg', '-y',
-            '-i', trimmed_video_path,
-            '-i', audio_path
-        ]
-
-        if has_srt:
-            safe_srt_path = srt_path.replace('\\', '/').replace(':', r'\:').replace("'", "\\'")
-            command.extend(['-vf', f"subtitles='{safe_srt_path}':force_style='FontName=SimHei,FontSize=16'"])
-
-        command.extend([
+            '-i', first_merge_path,
+            '-i', additional_video_path.replace('\\', '/'),
+            '-filter_complex',
+            '[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]',
+            '-map', '[v]',
+            '-map', '[a]',
             '-c:v', 'libx264',
             '-preset', 'medium',
             '-crf', '23',
-            '-c:a', 'copy',
-            '-shortest',
-            first_merge_path
-        ])
-
-        print(f"📽️ 合并画面+音频{'+字幕' if has_srt else ''}...")
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            final_output_path
+        ]
         try:
-            subprocess.run(command, check=True, capture_output=True, text=True)
-            if not os.path.exists(first_merge_path):
-                print("❌ 错误：第一次合并未生成输出文件")
-                return None
-            print("✅ 第一次合并完成")
-        except subprocess.CalledProcessError as e:
-            print(f"❌ FFmpeg 第一次合并报错: {e.stderr}")
-            return None
-
-        if has_additional_video:
-            print(f"🔗 合并额外视频: {os.path.basename(additional_video_path)}")
-            concat_command = [
-                'ffmpeg', '-y',
-                '-i', first_merge_path,
-                '-i', additional_video_path.replace('\\', '/'),
-                '-filter_complex',
-                '[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]',
-                '-map', '[v]',
-                '-map', '[a]',
-                '-c:v', 'libx264',
-                '-preset', 'medium',
-                '-crf', '23',
-                '-c:a', 'aac',
-                '-b:a', '192k',
-                final_output_path
-            ]
-            try:
-                subprocess.run(concat_command, check=True, capture_output=True, text=True)
-                if os.path.exists(final_output_path):
-                    print(f"✅ 成功合并额外视频: {final_output_path}")
-                    return final_output_path
-                else:
-                    print("❌ 错误：合并额外视频后未找到输出文件")
-                    return None
-            except subprocess.CalledProcessError as e:
-                print(f"❌ FFmpeg 合并额外视频报错: {e.stderr}")
-                return None
-        else:
-            os.rename(first_merge_path, final_output_path.replace('/', '\\'))
+            subprocess.run(concat_command, check=True, capture_output=True, text=True)
             if os.path.exists(final_output_path):
-                print(f"✅ 成功生成最终视频: {final_output_path}")
+                print(f"✅ 成功合并额外视频: {final_output_path}")
                 return final_output_path
             else:
-                print("❌ 错误：重命名输出文件失败")
+                print("❌ 错误：合并额外视频后未找到输出文件")
                 return None
+        except subprocess.CalledProcessError as e:
+            print(f"❌ FFmpeg 合并额外视频报错: {e.stderr}")
+            return None
+    else:
+        os.rename(first_merge_path, final_output_path.replace('/', '\\'))
+        if os.path.exists(final_output_path):
+            print(f"✅ 成功生成最终视频: {final_output_path}")
+            return final_output_path
+        else:
+            print("❌ 错误：重命名输出文件失败")
+            return None
 
 
 class VideoMergeStep(BaseStep):
