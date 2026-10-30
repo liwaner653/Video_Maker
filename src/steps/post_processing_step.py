@@ -32,7 +32,7 @@ class PostProcessingStep(BaseStep):
         for ctx in context.task_contexts:
             #if ctx.thumb_dir: dirs_to_delete.add(ctx.thumb_dir)
             if ctx.audio_dir: dirs_to_delete.add(ctx.audio_dir)
-            if ctx.trimmed_video_dir: dirs_to_delete.add(ctx.trimmed_video_dir)
+            # video_trim 文件夹保留：裁剪产物跨语言/跨批次复用
             
         for path in dirs_to_delete:
             if os.path.exists(path):

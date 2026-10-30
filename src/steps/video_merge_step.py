@@ -304,7 +304,6 @@ class VideoMergeStep(BaseStep):
             if os.path.exists(expected_path):
                 print(f"⏭️ 跳过音视频合并（check_exist=true，文件已存在）: {expected_path}")
                 context.final_video_path = expected_path.replace('\\', '/')
-                self._cleanup_trimmed_video(context, base_name)
                 return True
 
         additional_video = context.task.final_video.additional_video_path
@@ -320,17 +319,6 @@ class VideoMergeStep(BaseStep):
 
         if merged_path:
             context.final_video_path = merged_path
-            self._cleanup_trimmed_video(context, base_name)
             return True
         context.error_msg = "音视频合并失败"
         return False
-
-    def _cleanup_trimmed_video(self, context: TaskContext, base_name: str) -> None:
-        """合并完成后删除中间的裁剪视频文件"""
-        trimmed = context.trimmed_video_path or os.path.join(context.trimmed_video_dir, f"{base_name}_trimmed.mkv")
-        if os.path.exists(trimmed):
-            try:
-                os.remove(trimmed)
-                print(f"🧹 已清理中间视频: {trimmed}")
-            except OSError as e:
-                print(f"⚠️ 清理中间视频失败 {trimmed}: {e}")
