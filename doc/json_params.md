@@ -97,7 +97,8 @@ JSON 文件必须是**数组**，每个元素是一个视频任务对象：
 | `cut_front_seconds` | float | 无 | 开始时间（秒），支持小数 |
 | `start_chapter_name` | string | `""` | 从指定章节名开始（仅 mkv 有章节；章节不存在则警告并回退默认） |
 | `last_seconds` | float | 无 | 持续秒数，>0 时结束时间 = 开始 + 该值 |
-| `end_chapter_name` | string | 无 | 结束于指定章节名的结束时间 |
+| `end_chapter_name` | string | 无 | 结束于指定章节名的开始时间 |
+| `end_chapter_add_second` | float | 0.0 | 在 `end_chapter_name` 章节开始时间上加该秒数（可为负） |
 | `cut_back_seconds` | float | 无 | 结束时间 = 视频时长 − 该值 |
 | `thumbnail` | bool | true | 该段是否参与缩略图生成（仅 `src/main.py`） |
 | `srt` | bool | true | 该段是否生成/保留字幕 |

@@ -30,7 +30,7 @@ def _resolve_end_time(part, start_time: float, chapters: dict,
         return start_time + part.last_seconds
     if part.end_chapter_name:
         if part.end_chapter_name in chapters:
-            return chapters[part.end_chapter_name]["end_time"]
+            return chapters[part.end_chapter_name]["start_time"] + part.end_chapter_add_second
         print(f"⚠️ 结束章节不存在: {part.end_chapter_name}，使用默认结束时间 {default:.2f}s")
     if part.cut_back_seconds is not None:
         return video_duration - part.cut_back_seconds

@@ -32,7 +32,8 @@ class VideoPart:
     cut_back_seconds: Optional[float] = None  # 可选：从视频结尾裁剪多少秒结束
     start_chapter_name: str = ""  # 可选：从指定章节名称开始
     last_seconds: Optional[float] = None  # 可选：持续秒数（支持带帧的小数）
-    end_chapter_name: Optional[str] = None  # 可选：结束于指定章节名称
+    end_chapter_name: Optional[str] = None  # 可选：结束于指定章节名称（取该章节的开始时间）
+    end_chapter_add_second: float = 0.0  # 可选：在end_chapter的开始时间上加上该秒数（可为负）
     thumbnail: bool = True  # 默认true：是否生成缩略图
     srt: bool = True  # 默认true：是否生成字幕
     audio: bool = True  # 默认true：是否保留该片段的音频
